@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catagotchi Kitten Sanctuary</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Playpen+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div id="app" class="glass-container">
+    
+    <!-- Top Header Bar -->
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="logo-emoji">🐱</span>
+        <h1>Catagotchi</h1>
+        <span class="sub-title">Subreddit Kitten Sanctuary</span>
+      </div>
+      <div class="user-status-hud">
+        <div class="hud-item">
+          <span class="hud-label">Subreddit:</span>
+          <span id="hud-subreddit" class="hud-value">-</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Caretaker:</span>
+          <span id="hud-username" class="hud-value">-</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Actions:</span>
+          <span id="hud-actions" class="hud-value">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="app-body">
+      
+      <!-- Left Column: Litter List -->
+      <section class="litter-sidebar">
+        <h2>Active Litter</h2>
+        <div id="kitten-list" class="kitten-cards-container">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Center Column: Virtual Pet Playpen -->
+      <section class="playpen-section">
+        <div class="playpen-viewport">
+          
+          <!-- Background Decoration -->
+          <div class="viewport-backdrop">
+            <div class="window">
+              <div class="sun"></div>
+              <div class="cloud"></div>
+            </div>
+            <div class="toy-shelf">🧸 Yarn</div>
+            <div class="scratching-post">💈</div>
+          </div>
+
+          <!-- Pet Display Area -->
+          <div id="pet-container" class="pet-wrapper">
+            <!-- Animated SVG Cat/Kitten will be rendered here -->
+            <div id="kitten-visual" class="kitten-sprite">
+              <!-- SVG template injected dynamically -->
+            </div>
+            <!-- Floating Text/Particle Emitters -->
+            <div id="particle-emitter" class="emitter"></div>
+          </div>
+
+          <!-- Interactive Balloon Alerts (Hungry, Sad, Sleepy) -->
+          <div id="status-balloon" class="balloon hidden">
+            <span class="balloon-text">Feed me! 😿</span>
+          </div>
+
+          <!-- Quick Stats Overlay (Selected Kitten) -->
+          <div class="pet-stats-card">
+            <div class="pet-header">
+              <h3 id="pet-name">Litter Empty</h3>
+              <span id="pet-stage-badge" class="badge">kitten</span>
+              <button id="btn-rename-trigger" class="btn-icon" title="Rename Kitten">✏️</button>
+            </div>
+            <p class="owner-tag">Adopted by: <span id="pet-owner">u/-</span></p>
+            
+            <div class="stat-progress-bars">
+              <div class="stat-row">
+                <span class="stat-label">🐟 Hunger</span>
+                <div class="progress-track">
+                  <div id="bar-hunger" class="progress-fill fill-hunger" style="width: 0%"></div>
+                </div>
+                <span id="val-hunger" class="stat-percentage">0%</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">🧶 Happiness</span>
+                <div class="progress-track">
+                  <div id="bar-happiness" class="progress-fill fill-happiness" style="width: 0%"></div>
+                </div>
+                <span id="val-happiness" class="stat-percentage">0%</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">🧼 Cleanliness</span>
+                <div class="progress-track">
+                  <div id="bar-cleanliness" class="progress-fill fill-cleanliness" style="width: 0%"></div>
+                </div>
+                <span id="val-cleanliness" class="stat-percentage">0%</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Care Control Panel -->
+        <div class="care-controls">
+          <button id="btn-feed" class="btn-care btn-feed">
+            <span class="btn-icon-large">🐟</span>
+            <span class="btn-text">Feed Fish</span>
+          </button>
+          <button id="btn-play" class="btn-care btn-play">
+            <span class="btn-icon-large">🧶</span>
+            <span class="btn-text">Play Yarn</span>
+          </button>
+          <button id="btn-clean" class="btn-care btn-clean">
+            <span class="btn-icon-large">🧼</span>
+            <span class="btn-text">Give Bath</span>
+          </button>
+          <button id="btn-pet" class="btn-care btn-pet">
+            <span class="btn-icon-large">❤️</span>
+            <span class="btn-text">Pet Kitten</span>
+          </button>
+        </div>
+
+      </section>
+
+      <!-- Right Column: Sanctuary Hall of Fame & Subreddit Log -->
+      <section class="sanctuary-sidebar">
+        
+        <!-- Sanctuary Hall of Fame -->
+        <div class="cats-hall-container">
+          <h2>Sanctuary Cats</h2>
+          <div id="sanctuary-gallery" class="cats-gallery">
+            <!-- Dynamically populated grown cats -->
+            <p class="empty-gallery-msg">No cats successfully raised yet. Take good care of your kittens!</p>
+          </div>
+        </div>
+
+        <!-- Subreddit Care Log -->
+        <div class="activity-log-container">
+          <h2>Sanctuary Feed</h2>
+          <div id="activity-log" class="logs-feed">
+            <!-- Game logs -->
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Modal for Renaming Kitten -->
+    <div id="rename-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Rename Kitten</h3>
+        <p>Give your adopted companion a new identity:</p>
+        <input type="text" id="rename-input" placeholder="Enter name (max 15 chars)">
+        <div class="modal-actions">
+          <button id="btn-rename-cancel" class="btn-secondary">Cancel</button>
+          <button id="btn-rename-save" class="btn-primary">Save Name</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin Time Warp HUD (Visible to Mods) -->
+    <footer id="admin-controls" class="admin-hud hidden">
+      <span class="admin-label">🛡️ Moderator Controls:</span>
+      <button id="btn-warp-1" class="btn-admin">⏰ Warp +1h</button>
+      <button id="btn-warp-12" class="btn-admin">⏰ Warp +12h</button>
+      <button id="btn-warp-72" class="btn-admin">⏰ Warp +72h</button>
+      <span class="admin-help">(Simulates stat decay and growth)</span>
+    </footer>
+
+  </div>
+
+  <script src="index.js" type="module"></script>
+</body>
+</html>

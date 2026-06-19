@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "name": "catagotchi",
+  "version": "0.0.0",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "scripts": {
+    "build": "node --experimental-strip-types ./tools/build.ts",
+    "dev": "devvit playtest"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "dependencies": {
+    "@devvit/public-api": "0.13.4",
+    "@devvit/web": "0.13.4",
+    "devvit": "0.13.4"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}
