@@ -133,7 +133,9 @@ function getKittenSvg(color: string, eyesType: string, isCat: boolean, headOnly:
         <ellipse cx="50" cy="53" rx="5" ry="3.5" fill="#ff7da0" stroke="#000" stroke-width="4"/>
         
         <!-- Eyes -->
-        ${eyesSvg}
+        <g class="kitten-eyes">
+          ${eyesSvg}
+        </g>
         
         <!-- Collar -->
         ${isCat ? `
@@ -147,18 +149,18 @@ function getKittenSvg(color: string, eyesType: string, isCat: boolean, headOnly:
   return `
     <svg viewBox="0 0 100 100" class="svg-kitten" style="transform: ${translate} ${scale};">
       <!-- Tail -->
-      <path d="M 72 80 Q 86 68 81 48 Q 76 38 83 28" stroke="#000" stroke-width="7.5" stroke-linecap="round" fill="none"/>
-      <path d="M 72 80 Q 86 68 81 48 Q 76 38 83 28" stroke="${color}" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <g class="kitten-tail">
+        <path d="M 68 82 C 78 82, 85 75, 82 60 C 80 50, 88 45, 85 35" fill="none" stroke="#000" stroke-width="8" stroke-linecap="round"/>
+        <path d="M 68 82 C 78 82, 85 75, 82 60 C 80 50, 88 45, 85 35" fill="none" stroke="${color}" stroke-width="4.5" stroke-linecap="round"/>
+      </g>
       
       <!-- Body -->
-      <ellipse cx="50" cy="73" rx="25" ry="17" fill="${color}" stroke="#000" stroke-width="5"/>
-      <ellipse cx="50" cy="75" rx="18" ry="11" fill="rgba(255,255,255,0.2)"/>
+      <path d="M 33 60 C 25 70, 20 85, 30 88 C 40 90, 60 90, 70 88 C 80 85, 75 70, 67 60 Z" fill="${color}" stroke="#000" stroke-width="5" stroke-linejoin="round"/>
+      <ellipse cx="50" cy="74" rx="15" ry="9" fill="rgba(255,255,255,0.2)"/>
       
       <!-- Paws -->
-      <circle cx="35" cy="88" r="6" fill="${color}" stroke="#000" stroke-width="4.5"/>
-      <circle cx="45" cy="89" r="6" fill="${color}" stroke="#000" stroke-width="4.5"/>
-      <circle cx="55" cy="89" r="6" fill="${color}" stroke="#000" stroke-width="4.5"/>
-      <circle cx="65" cy="88" r="6" fill="${color}" stroke="#000" stroke-width="4.5"/>
+      <ellipse cx="40" cy="88" rx="8" ry="5" fill="${color}" stroke="#000" stroke-width="4.5"/>
+      <ellipse cx="60" cy="88" rx="8" ry="5" fill="${color}" stroke="#000" stroke-width="4.5"/>
       
       <!-- Head Silhouette (combines base, ears, cheek spikes, and top tufts to avoid inner outlines) -->
       <path d="M 36 24 L 12 15 Q 15 28, 22 38 L 15 41 L 23 45 L 16 49 L 24 53 Q 50 70, 76 53 L 84 49 L 77 45 L 85 41 L 78 38 Q 85 28, 88 15 L 64 24 L 59 23 L 57 16 L 51 22 L 48 17 L 43 23 L 40 18 Z" fill="${color}" stroke="#000" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
@@ -191,7 +193,9 @@ function getKittenSvg(color: string, eyesType: string, isCat: boolean, headOnly:
       <ellipse cx="50" cy="53" rx="5" ry="3.5" fill="#ff7da0" stroke="#000" stroke-width="4"/>
       
       <!-- Eyes -->
-      ${eyesSvg}
+      <g class="kitten-eyes">
+        ${eyesSvg}
+      </g>
       
       <!-- Collar for Mature Cats -->
       ${isCat ? `
@@ -221,11 +225,24 @@ function triggerParticles(emoji: string) {
 
 // Update Active Viewport Display
 function updateActivePetDisplay() {
+  // Sync selected and shiver classes for playpen elements
+  const playpenKittens = document.querySelectorAll(".playpen-kitten");
+  playpenKittens.forEach((el) => {
+    const kid = el.getAttribute("data-id");
+    const isSel = selectedKitten && kid === selectedKitten.id;
+    el.classList.toggle("selected", !!isSel);
+    
+    const kData = kittensList.find(x => x.id === kid);
+    const svgWrap = el.querySelector(".kitten-svg-wrapper");
+    if (svgWrap && kData) {
+      svgWrap.classList.toggle("anim-neglected", kData.neglectedSince !== null);
+    }
+  });
+
   if (!selectedKitten) {
     petName.textContent = "Adopt a Kitten!";
     petStageBadge.classList.add("hidden");
     petOwner.textContent = "u/-";
-    kittenVisual.innerHTML = `<span style="font-size: 3rem; opacity: 0.5;">💤</span>`;
     statusBalloon.classList.add("hidden");
     
     // Reset stats
@@ -260,17 +277,7 @@ function updateActivePetDisplay() {
     btnRenameTrigger.classList.add("hidden");
   }
 
-  // Draw Pet Visual
   const isCat = selectedKitten.stage === "cat";
-  let expr = selectedKitten.eyes;
-  
-  // Set shiver shake class if neglected
-  kittenVisual.className = "kitten-sprite";
-  if (selectedKitten.neglectedSince !== null) {
-    kittenVisual.classList.add("anim-neglected");
-  }
-
-  kittenVisual.innerHTML = getKittenSvg(selectedKitten.color, expr, isCat);
 
   // Stats
   const h = Math.round(selectedKitten.hunger);
@@ -452,6 +459,7 @@ async function fetchInit() {
     renderLitterList();
     renderSanctuaryGallery();
     renderLogs(data.logs);
+    renderPlaypen();
     updateActivePetDisplay();
   } catch (err) {
     console.error("Error during initial state sync:", err);
@@ -462,8 +470,12 @@ async function fetchInit() {
 async function performCareAction(actionType: CareActionType) {
   if (!selectedKitten) return;
   
-  // Visual Trigger
-  kittenVisual.classList.add(`anim-${actionType}`);
+  // Visual Trigger on selected playpen element
+  const selectedWrap = document.querySelector(`.playpen-kitten[data-id="${selectedKitten.id}"] .kitten-svg-wrapper`);
+  if (selectedWrap) {
+    selectedWrap.classList.add(`anim-${actionType}`);
+  }
+  
   let emoji = "❤️";
   if (actionType === "feed") emoji = "🐟";
   if (actionType === "play") emoji = "🧶";
@@ -499,6 +511,7 @@ async function performCareAction(actionType: CareActionType) {
     renderLitterList();
     renderSanctuaryGallery();
     renderLogs(data.logs);
+    renderPlaypen();
     updateActivePetDisplay();
     
     hudActions.textContent = data.profile.actionsPerformed.toString();
@@ -507,7 +520,12 @@ async function performCareAction(actionType: CareActionType) {
   } finally {
     // Clear animation classes
     setTimeout(() => {
-      kittenVisual.classList.remove(`anim-${actionType}`);
+      if (selectedKitten) {
+        const wrap = document.querySelector(`.playpen-kitten[data-id="${selectedKitten.id}"] .kitten-svg-wrapper`);
+        if (wrap) {
+          wrap.classList.remove(`anim-${actionType}`);
+        }
+      }
     }, 800);
   }
 }
@@ -623,6 +641,7 @@ btnSummonStray.addEventListener("click", async () => {
     renderLitterList();
     renderSanctuaryGallery();
     renderLogs(data.logs);
+    renderPlaypen();
     updateActivePetDisplay();
     triggerParticles("🐱");
   } catch (err) {
@@ -647,53 +666,150 @@ const AUTONOMOUS_SPEECHES = [
   "Napping in the sun... ☀️"
 ];
 
-function showSpeechBubble(text: string) {
-  if (!selectedKitten) return;
-  petSpeechText.textContent = text;
-  petSpeech.classList.remove("hidden");
-  
-  setTimeout(() => {
-    petSpeech.classList.add("hidden");
-  }, 3500);
+interface PlaypenKittenState {
+  id: string;
+  x: number;
+  targetX: number;
+  isWalking: boolean;
+  isFlipped: boolean;
+  speed: number;
+  speechTimeout: any;
 }
 
-// Background autonomous behaviors ticker (every 8 seconds)
-setInterval(() => {
-  if (!selectedKitten) return;
-  if (selectedKitten.stage === "cat") return; // Cats are chilling, only kittens do crazy stuff!
-  
-  // 35% chance to perform an action on any tick
-  if (Math.random() > 0.35) return;
+const playpenStates = new Map<string, PlaypenKittenState>();
 
-  const actionRoll = Math.random();
-  if (actionRoll < 0.5) {
-    // Show random cute thoughts/meows
-    const randomText = AUTONOMOUS_SPEECHES[Math.floor(Math.random() * AUTONOMOUS_SPEECHES.length)] || "Meow!";
-    showSpeechBubble(randomText);
-  } else if (actionRoll < 0.8) {
-    // Wander movement action
-    const shiftPercent = Math.floor(Math.random() * 60) - 30; // Shift -30px to +30px
-    kittenVisual.style.transform = `translateX(${shiftPercent}px)`;
-    
-    showSpeechBubble("Exploring! 🐾");
-    
-    setTimeout(() => {
-      kittenVisual.style.transform = "none";
-    }, 3000);
-  } else {
-    // Expression blip (temporary blink/sleep)
-    const isCat = selectedKitten.stage === "cat";
-    const originalEyes = selectedKitten.eyes;
-    
-    kittenVisual.innerHTML = getKittenSvg(selectedKitten.color, "sleeping", isCat);
-    
-    setTimeout(() => {
-      if (selectedKitten) {
-        kittenVisual.innerHTML = getKittenSvg(selectedKitten.color, originalEyes, isCat);
-      }
-    }, 1500);
+function renderPlaypen() {
+  // Clear any existing playpen kittens
+  const existingKittens = document.querySelectorAll(".playpen-kitten");
+  existingKittens.forEach(el => el.remove());
+  
+  // Hide the old single visual container and bubble
+  kittenVisual.style.display = "none";
+  petSpeech.style.display = "none";
+
+  if (kittensList.length === 0) {
+    // Show a sleeping emoji or similar empty state
+    const emptyMsg = document.createElement("div");
+    emptyMsg.className = "playpen-kitten";
+    emptyMsg.style.left = "42%";
+    emptyMsg.style.bottom = "15px";
+    emptyMsg.innerHTML = `<span style="font-size: 3rem; opacity: 0.5;">💤</span>`;
+    particleEmitter.parentElement?.insertBefore(emptyMsg, particleEmitter);
+    return;
   }
-}, 8000);
+
+  // Render each active kitten in the playpen
+  kittensList.forEach((k) => {
+    let state = playpenStates.get(k.id);
+    if (!state) {
+      const initialX = 15 + Math.random() * 60;
+      state = {
+        id: k.id,
+        x: initialX,
+        targetX: initialX,
+        isWalking: false,
+        isFlipped: Math.random() > 0.5,
+        speed: 0.15 + Math.random() * 0.15,
+        speechTimeout: null,
+      };
+      playpenStates.set(k.id, state);
+    }
+
+    const kDiv = document.createElement("div");
+    kDiv.className = `playpen-kitten ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""}`;
+    kDiv.setAttribute("data-id", k.id);
+    kDiv.style.left = `${state.x}%`;
+
+    const flipStyle = state.isFlipped ? "transform: scaleX(-1);" : "transform: scaleX(1);";
+
+    kDiv.innerHTML = `
+      <div class="kitten-speech-bubble hidden">
+        <span>Meow!</span>
+      </div>
+      <div class="kitten-svg-wrapper" style="${flipStyle}">
+        ${getKittenSvg(k.color, k.eyes, k.stage === "cat")}
+      </div>
+    `;
+
+    // Click handler to select this kitten
+    kDiv.addEventListener("click", () => {
+      selectedKitten = k;
+      renderLitterList();
+      renderPlaypen();
+      updateActivePetDisplay();
+    });
+
+    // Insert before the particle emitter
+    particleEmitter.parentElement?.insertBefore(kDiv, particleEmitter);
+  });
+}
+
+function showKittenSpeech(kittenId: string, text: string) {
+  const kEl = document.querySelector(`.playpen-kitten[data-id="${kittenId}"]`);
+  if (!kEl) return;
+  const bubble = kEl.querySelector(".kitten-speech-bubble") as HTMLDivElement;
+  const textSpan = bubble?.querySelector("span");
+  if (!bubble || !textSpan) return;
+
+  textSpan.textContent = text;
+  bubble.classList.remove("hidden");
+
+  const state = playpenStates.get(kittenId);
+  if (state) {
+    if (state.speechTimeout) clearTimeout(state.speechTimeout);
+    state.speechTimeout = setTimeout(() => {
+      bubble.classList.add("hidden");
+    }, 3500);
+  }
+}
+
+// Autonomous Walking & Actions Loop (runs every 100ms)
+setInterval(() => {
+  kittensList.forEach((k) => {
+    const state = playpenStates.get(k.id);
+    if (!state) return;
+
+    const el = document.querySelector(`.playpen-kitten[data-id="${k.id}"]`) as HTMLDivElement;
+    if (!el) return;
+
+    const svgWrap = el.querySelector(".kitten-svg-wrapper") as HTMLDivElement;
+
+    if (state.isWalking) {
+      const delta = state.targetX - state.x;
+      if (Math.abs(delta) < 1) {
+        // Arrived at target!
+        state.isWalking = false;
+        state.x = state.targetX;
+        
+        // 10% chance to speak on arrival
+        if (Math.random() < 0.1) {
+          const randomText = AUTONOMOUS_SPEECHES[Math.floor(Math.random() * AUTONOMOUS_SPEECHES.length)] || "Meow!";
+          showKittenSpeech(k.id, randomText);
+        }
+      } else {
+        // Walk!
+        state.x += Math.sign(delta) * state.speed;
+        state.isFlipped = delta < 0; // Flip visual depending on direction
+        el.style.left = `${state.x}%`;
+        if (svgWrap) {
+          svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
+        }
+      }
+    } else {
+      // Resting - 1.5% chance per tick to pick a new destination and start walking
+      if (Math.random() < 0.015) {
+        state.targetX = 15 + Math.random() * 60;
+        state.isWalking = true;
+      }
+      
+      // 0.3% chance to speak while resting
+      if (Math.random() < 0.003) {
+        const randomText = AUTONOMOUS_SPEECHES[Math.floor(Math.random() * AUTONOMOUS_SPEECHES.length)] || "Meow!";
+        showKittenSpeech(k.id, randomText);
+      }
+    }
+  });
+}, 100);
 
 // Initial Load & Polling Ticker
 fetchInit();

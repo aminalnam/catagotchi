@@ -924,3 +924,112 @@ button {
   100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
 }
 
+/* Multi-Kitten Playpen Styling & Animations */
+.playpen-kitten {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  transition: left 0.8s linear, bottom 0.2s ease-out, transform 0.3s;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.playpen-kitten .kitten-svg-wrapper {
+  width: 110px;
+  height: 110px;
+  transition: transform 0.2s ease-in-out;
+  position: relative;
+}
+
+/* Selector Highlight */
+.playpen-kitten.selected .kitten-svg-wrapper {
+  filter: drop-shadow(0 0 10px var(--text-active));
+}
+
+/* Selected Ring */
+.playpen-kitten.selected::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  width: 50px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--text-active);
+  box-shadow: 0 0 8px var(--text-active);
+  animation: selection-ring 1.5s infinite ease-in-out alternate;
+  pointer-events: none;
+  background: transparent;
+}
+
+@keyframes selection-ring {
+  0% { opacity: 0.4; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1.15); }
+}
+
+/* Breathing/Bobbing */
+.playpen-kitten .kitten-svg-wrapper {
+  animation: bob 3s ease-in-out infinite;
+}
+
+/* Out-of-sync delay classes for up to 8 kittens */
+.playpen-kitten:nth-child(2n) .kitten-svg-wrapper { animation-delay: -0.4s; animation-duration: 2.8s; }
+.playpen-kitten:nth-child(3n) .kitten-svg-wrapper { animation-delay: -0.9s; animation-duration: 3.2s; }
+.playpen-kitten:nth-child(4n) .kitten-svg-wrapper { animation-delay: -1.3s; animation-duration: 3.5s; }
+.playpen-kitten:nth-child(5n) .kitten-svg-wrapper { animation-delay: -1.8s; animation-duration: 2.6s; }
+
+/* Eye Blinking (squash scaleY) */
+.kitten-eyes {
+  transform-origin: 50px 46px;
+  animation: eye-blink 4s infinite;
+}
+
+@keyframes eye-blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.15); }
+}
+
+/* Tail Wagging */
+.kitten-tail {
+  transform-origin: 68px 82px;
+  animation: tail-wag 2s ease-in-out infinite alternate;
+}
+
+@keyframes tail-wag {
+  0% { transform: rotate(-8deg); }
+  100% { transform: rotate(12deg); }
+}
+
+/* Speech Bubbles for playpen kittens */
+.kitten-speech-bubble {
+  position: absolute;
+  bottom: 105%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 5px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+  z-index: 10;
+  animation: bounce-speech 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.kitten-speech-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #f8fafc transparent transparent transparent;
+}
+
+
