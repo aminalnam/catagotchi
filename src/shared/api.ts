@@ -37,6 +37,11 @@ export interface PlayerProfile {
   hasPlayedBefore: boolean;
 }
 
+export interface LeaderboardItem {
+  username: string;
+  score: number;
+}
+
 export interface InitResponse {
   type: "init";
   postId: string;
@@ -47,6 +52,7 @@ export interface InitResponse {
   cats: Kitten[];
   logs: GameLog[];
   profile: PlayerProfile;
+  leaderboard: LeaderboardItem[];
 }
 
 export type CareActionType = "feed" | "play" | "clean" | "pet";
@@ -63,6 +69,7 @@ export interface ActionResponse {
   cats: Kitten[];
   logs: GameLog[];
   profile: PlayerProfile;
+  leaderboard: LeaderboardItem[];
 }
 
 export interface RenameRequest {

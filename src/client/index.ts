@@ -28,6 +28,7 @@ const hudActions = document.getElementById("hud-actions") as HTMLSpanElement;
 const kittenCardsContainer = document.getElementById("kitten-list") as HTMLDivElement;
 const sanctuaryGallery = document.getElementById("sanctuary-gallery") as HTMLDivElement;
 const activityLog = document.getElementById("activity-log") as HTMLDivElement;
+const leaderboardList = document.getElementById("leaderboard-list") as HTMLDivElement;
 
 const petName = document.getElementById("pet-name") as HTMLHeadingElement;
 const petStageBadge = document.getElementById("pet-stage-badge") as HTMLSpanElement;
@@ -162,46 +163,49 @@ function getKittenSvg(color: string, eyesType: string, isCat: boolean, headOnly:
       <ellipse cx="40" cy="88" rx="8" ry="5" fill="${color}" stroke="#000" stroke-width="4.5"/>
       <ellipse cx="60" cy="88" rx="8" ry="5" fill="${color}" stroke="#000" stroke-width="4.5"/>
       
-      <!-- Head Silhouette (combines base, ears, cheek spikes, and top tufts to avoid inner outlines) -->
-      <path d="M 36 24 L 12 15 Q 15 28, 22 38 L 15 41 L 23 45 L 16 49 L 24 53 Q 50 70, 76 53 L 84 49 L 77 45 L 85 41 L 78 38 Q 85 28, 88 15 L 64 24 L 59 23 L 57 16 L 51 22 L 48 17 L 43 23 L 40 18 Z" fill="${color}" stroke="#000" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-      
-      <!-- Inner Ears -->
-      <path d="M 32 23 L 16 18 Q 18 26, 22 32 Z" fill="#FF8A5B"/>
-      <path d="M 68 23 L 84 18 Q 82 26, 78 32 Z" fill="#FF8A5B"/>
-      
-      <!-- Forehead Tufts (double-arch forehead marking) -->
-      <path d="M 43 31 Q 46.5 27 50 31 Q 53.5 27 57 31" stroke="rgba(0,0,0,0.25)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
-      
-      <!-- Cheek whisker markings -->
-      <!-- Left Cheek -->
-      <line x1="26" y1="50" x2="31" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="25" y1="53" x2="30" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="26" y1="56" x2="31" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-      <!-- Right Cheek -->
-      <line x1="74" y1="50" x2="69" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="75" y1="53" x2="70" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="74" y1="56" x2="69" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-      
-      <!-- Tongue Blep (draw behind mouth lines for neat outline intersection) -->
-      <path d="M 47 56 C 47 65, 53 65, 53 56 Z" fill="#ff4d79" stroke="#000" stroke-width="4.5"/>
-      <line x1="50" y1="56" x2="50" y2="61" stroke="#000" stroke-width="3" stroke-linecap="round"/>
-      
-      <!-- Mouth curves -->
-      <path d="M 42 55 Q 46 60 50 55 Q 54 60 58 55" stroke="#000" stroke-width="4.5" stroke-linecap="round" fill="none"/>
-      
-      <!-- Nose -->
-      <ellipse cx="50" cy="53" rx="5" ry="3.5" fill="#ff7da0" stroke="#000" stroke-width="4"/>
-      
-      <!-- Eyes -->
-      <g class="kitten-eyes">
-        ${eyesSvg}
+      <!-- Head Assembly (wrapped in group for head tilt/lick animations) -->
+      <g class="kitten-head-group">
+        <!-- Head Silhouette (combines base, ears, cheek spikes, and top tufts to avoid inner outlines) -->
+        <path d="M 36 24 L 12 15 Q 15 28, 22 38 L 15 41 L 23 45 L 16 49 L 24 53 Q 50 70, 76 53 L 84 49 L 77 45 L 85 41 L 78 38 Q 85 28, 88 15 L 64 24 L 59 23 L 57 16 L 51 22 L 48 17 L 43 23 L 40 18 Z" fill="${color}" stroke="#000" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+        
+        <!-- Inner Ears -->
+        <path d="M 32 23 L 16 18 Q 18 26, 22 32 Z" fill="#FF8A5B"/>
+        <path d="M 68 23 L 84 18 Q 82 26, 78 32 Z" fill="#FF8A5B"/>
+        
+        <!-- Forehead Tufts (double-arch forehead marking) -->
+        <path d="M 43 31 Q 46.5 27 50 31 Q 53.5 27 57 31" stroke="rgba(0,0,0,0.25)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        
+        <!-- Cheek whisker markings -->
+        <!-- Left Cheek -->
+        <line x1="26" y1="50" x2="31" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="25" y1="53" x2="30" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="26" y1="56" x2="31" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Right Cheek -->
+        <line x1="74" y1="50" x2="69" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="75" y1="53" x2="70" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="74" y1="56" x2="69" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        
+        <!-- Tongue Blep (draw behind mouth lines for neat outline intersection) -->
+        <path d="M 47 56 C 47 65, 53 65, 53 56 Z" fill="#ff4d79" stroke="#000" stroke-width="4.5"/>
+        <line x1="50" y1="56" x2="50" y2="61" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+        
+        <!-- Mouth curves -->
+        <path d="M 42 55 Q 46 60 50 55 Q 54 60 58 55" stroke="#000" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+        
+        <!-- Nose -->
+        <ellipse cx="50" cy="53" rx="5" ry="3.5" fill="#ff7da0" stroke="#000" stroke-width="4"/>
+        
+        <!-- Eyes -->
+        <g class="kitten-eyes">
+          ${eyesSvg}
+        </g>
+        
+        <!-- Collar for Mature Cats -->
+        ${isCat ? `
+          <path d="M 33 60 Q 50 65 67 60" stroke="#f43f5e" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+          <circle cx="50" cy="64" r="5" fill="#fbbf24" stroke="#000" stroke-width="2"/>
+        ` : ""}
       </g>
-      
-      <!-- Collar for Mature Cats -->
-      ${isCat ? `
-        <path d="M 33 60 Q 50 65 67 60" stroke="#f43f5e" stroke-width="5.5" stroke-linecap="round" fill="none"/>
-        <circle cx="50" cy="64" r="5" fill="#fbbf24" stroke="#000" stroke-width="2"/>
-      ` : ""}
     </svg>
   `;
 }
@@ -420,6 +424,32 @@ function renderLogs(logs: GameLog[]) {
   });
 }
 
+interface LeaderboardItem {
+  username: string;
+  score: number;
+}
+
+function renderLeaderboard(list: LeaderboardItem[]) {
+  leaderboardList.innerHTML = "";
+  if (!list || list.length === 0) {
+    leaderboardList.innerHTML = `<p class="empty-gallery-msg">No actions logged yet. Start caring for kittens!</p>`;
+    return;
+  }
+
+  // Display top 5 to fit inside compact sidebar
+  const topList = list.slice(0, 5);
+  topList.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "leaderboard-item";
+    row.innerHTML = `
+      <span class="leaderboard-rank">#${index + 1}</span>
+      <span class="leaderboard-user">u/${item.username}</span>
+      <span class="leaderboard-score">${item.score} pts</span>
+    `;
+    leaderboardList.appendChild(row);
+  });
+}
+
 // Fetch Init Game State
 async function fetchInit() {
   try {
@@ -459,6 +489,7 @@ async function fetchInit() {
     renderLitterList();
     renderSanctuaryGallery();
     renderLogs(data.logs);
+    renderLeaderboard(data.leaderboard);
     renderPlaypen();
     updateActivePetDisplay();
   } catch (err) {
@@ -511,6 +542,7 @@ async function performCareAction(actionType: CareActionType) {
     renderLitterList();
     renderSanctuaryGallery();
     renderLogs(data.logs);
+    renderLeaderboard(data.leaderboard);
     renderPlaypen();
     updateActivePetDisplay();
     
@@ -674,9 +706,48 @@ interface PlaypenKittenState {
   isFlipped: boolean;
   speed: number;
   speechTimeout: any;
+  behavior: 'wandering' | 'napping' | 'grooming' | 'staring' | 'chasing';
+  behaviorTimer: number; // ticks left for current behavior
 }
 
 const playpenStates = new Map<string, PlaypenKittenState>();
+
+const BEHAVIOR_SPEECHES: Record<string, string[]> = {
+  napping: [
+    "Zzz... 💤",
+    "Zzz... purr... 😻",
+    "*sleeping in a warm sunbeam*",
+    "*quiet snores*",
+    "Purrr... 💤"
+  ],
+  grooming: [
+    "*licks paws*",
+    "*cleans face*",
+    "*stretches paws*",
+    "*smooths fur*",
+    "Looking neat! ✨"
+  ],
+  chasing: [
+    "A red dot! Chasing! 🔴",
+    "Watch me jump! 🧶",
+    "Got the dust bunny!",
+    "Zoomies! 💨",
+    "*pounces!*"
+  ],
+  staring: [
+    "*stares blankly at you*",
+    "Do you have food? 🐟",
+    "Are you coding? 💻",
+    "Pet me? 🥺",
+    "What's that noise? 👂"
+  ],
+  wandering: [
+    "Exploring the playpen... 🐾",
+    "Wandering around...",
+    "Sniffing the carpet...",
+    "Looking for toys! 🧸"
+  ]
+};
 
 function renderPlaypen() {
   // Clear any existing playpen kittens
@@ -688,7 +759,6 @@ function renderPlaypen() {
   petSpeech.style.display = "none";
 
   if (kittensList.length === 0) {
-    // Show a sleeping emoji or similar empty state
     const emptyMsg = document.createElement("div");
     emptyMsg.className = "playpen-kitten";
     emptyMsg.style.left = "42%";
@@ -709,25 +779,31 @@ function renderPlaypen() {
         targetX: initialX,
         isWalking: false,
         isFlipped: Math.random() > 0.5,
-        speed: 0.15 + Math.random() * 0.15,
+        speed: 0.12 + Math.random() * 0.1,
         speechTimeout: null,
+        behavior: 'wandering',
+        behaviorTimer: 30 + Math.random() * 40,
       };
       playpenStates.set(k.id, state);
     }
 
     const kDiv = document.createElement("div");
-    kDiv.className = `playpen-kitten ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""}`;
+    // Class includes behavior for CSS animations
+    kDiv.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""}`;
     kDiv.setAttribute("data-id", k.id);
     kDiv.style.left = `${state.x}%`;
 
     const flipStyle = state.isFlipped ? "transform: scaleX(-1);" : "transform: scaleX(1);";
+    
+    // Napping override: show sleeping eyes
+    const renderEyes = state.behavior === "napping" ? "sleeping" : k.eyes;
 
     kDiv.innerHTML = `
       <div class="kitten-speech-bubble hidden">
         <span>Meow!</span>
       </div>
       <div class="kitten-svg-wrapper" style="${flipStyle}">
-        ${getKittenSvg(k.color, k.eyes, k.stage === "cat")}
+        ${getKittenSvg(k.color, renderEyes, k.stage === "cat")}
       </div>
     `;
 
@@ -774,6 +850,59 @@ setInterval(() => {
 
     const svgWrap = el.querySelector(".kitten-svg-wrapper") as HTMLDivElement;
 
+    // 1. Behavior State Machine Ticker
+    state.behaviorTimer--;
+    if (state.behaviorTimer <= 0) {
+      // Pick new behavior state
+      const roll = Math.random();
+      let nextBehavior: 'wandering' | 'napping' | 'grooming' | 'staring' | 'chasing';
+      
+      if (roll < 0.35) {
+        nextBehavior = 'wandering';
+        state.behaviorTimer = 40 + Math.floor(Math.random() * 50); // 4-9s
+        state.targetX = 15 + Math.random() * 60;
+        state.isWalking = true;
+        state.speed = 0.12 + Math.random() * 0.08;
+      } else if (roll < 0.6) {
+        nextBehavior = 'napping';
+        state.behaviorTimer = 80 + Math.floor(Math.random() * 100); // 8-18s
+        state.isWalking = false;
+      } else if (roll < 0.75) {
+        nextBehavior = 'grooming';
+        state.behaviorTimer = 40 + Math.floor(Math.random() * 40); // 4-8s
+        state.isWalking = false;
+      } else if (roll < 0.9) {
+        nextBehavior = 'staring';
+        state.behaviorTimer = 30 + Math.floor(Math.random() * 30); // 3-6s
+        state.isWalking = false;
+      } else {
+        nextBehavior = 'chasing';
+        state.behaviorTimer = 25 + Math.floor(Math.random() * 30); // 2.5-5.5s
+        state.targetX = 15 + Math.random() * 60;
+        state.isWalking = true;
+        state.speed = 0.35 + Math.random() * 0.1; // Fast speed boost!
+      }
+
+      state.behavior = nextBehavior;
+      
+      // Update DOM classes for CSS animations
+      el.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""}`;
+      
+      // Re-render SVG to show correct eyes
+      const renderEyes = state.behavior === "napping" ? "sleeping" : k.eyes;
+      if (svgWrap) {
+        svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat");
+      }
+
+      // 60% chance to say something about new behavior
+      if (Math.random() < 0.6) {
+        const pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+        const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
+        showKittenSpeech(k.id, randomText);
+      }
+    }
+
+    // 2. Perform Movement
     if (state.isWalking) {
       const delta = state.targetX - state.x;
       if (Math.abs(delta) < 1) {
@@ -781,9 +910,10 @@ setInterval(() => {
         state.isWalking = false;
         state.x = state.targetX;
         
-        // 10% chance to speak on arrival
-        if (Math.random() < 0.1) {
-          const randomText = AUTONOMOUS_SPEECHES[Math.floor(Math.random() * AUTONOMOUS_SPEECHES.length)] || "Meow!";
+        // 20% chance to speak on arrival
+        if (Math.random() < 0.2) {
+          const pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+          const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
           showKittenSpeech(k.id, randomText);
         }
       } else {
@@ -796,15 +926,11 @@ setInterval(() => {
         }
       }
     } else {
-      // Resting - 1.5% chance per tick to pick a new destination and start walking
-      if (Math.random() < 0.015) {
-        state.targetX = 15 + Math.random() * 60;
-        state.isWalking = true;
-      }
-      
-      // 0.3% chance to speak while resting
-      if (Math.random() < 0.003) {
-        const randomText = AUTONOMOUS_SPEECHES[Math.floor(Math.random() * AUTONOMOUS_SPEECHES.length)] || "Meow!";
+      // Sitting still
+      // 0.4% chance to meow/speak while sitting
+      if (Math.random() < 0.004) {
+        const pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+        const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
         showKittenSpeech(k.id, randomText);
       }
     }

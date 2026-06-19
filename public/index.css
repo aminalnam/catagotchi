@@ -628,13 +628,60 @@ h2 {
   color: var(--text-main);
 }
 
-/* Right Sidebar: Cats & Activity Log */
+/* Right Sidebar: Cats, Leaderboard, & Activity Log */
 .sanctuary-sidebar {
   border-left: 1px solid var(--border-glass);
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 120px 1.2fr 1fr;
   overflow: hidden;
   background: rgba(10, 14, 23, 0.1);
+}
+
+.leaderboard-container {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.leaderboard-feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leaderboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.76rem;
+  background: var(--bg-glass-bright);
+  border: 1px solid var(--border-glass);
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.leaderboard-rank {
+  font-weight: 800;
+  color: var(--text-active);
+  margin-right: 6px;
+}
+
+.leaderboard-user {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaderboard-score {
+  font-weight: 800;
+  color: var(--accent-happiness);
 }
 
 .cats-hall-container, .activity-log-container {
@@ -1031,5 +1078,70 @@ button {
   border-style: solid;
   border-color: #f8fafc transparent transparent transparent;
 }
+
+/* Cat Behaviors Transformations & Animations */
+.kitten-head-group {
+  transform-origin: 50px 46px;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* 1. Napping State: head droop and slow breathing */
+.playpen-kitten.napping .kitten-head-group {
+  transform: translateY(4px) rotate(2deg);
+}
+
+.playpen-kitten.napping .kitten-svg-wrapper {
+  animation: nap-breathing 3.5s ease-in-out infinite !important;
+}
+
+@keyframes nap-breathing {
+  0%, 100% { transform: translateY(0) scaleY(0.96) scaleX(1.02); }
+  50% { transform: translateY(2px) scaleY(0.92) scaleX(1.04); }
+}
+
+.playpen-kitten.napping.selected::after {
+  border-color: #c084fc;
+  box-shadow: 0 0 8px #c084fc;
+}
+
+/* 2. Grooming State: licking paws head-tilt */
+.playpen-kitten.grooming .kitten-head-group {
+  animation: head-lick 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes head-lick {
+  0% { transform: rotate(-10deg) translateY(1px); }
+  100% { transform: rotate(12deg) translateY(3px); }
+}
+
+/* 3. Chasing State: fast runner hop */
+.playpen-kitten.chasing .kitten-svg-wrapper {
+  animation: pounce-run 0.5s infinite alternate ease-in-out !important;
+}
+
+@keyframes pounce-run {
+  0% { transform: translateY(0) scaleY(1); }
+  100% { transform: translateY(-12px) scaleY(0.9) scaleX(1.05); }
+}
+
+.playpen-kitten.chasing.selected::after {
+  border-color: #fbbf24;
+  box-shadow: 0 0 8px #fbbf24;
+}
+
+/* 4. Staring State: lean forward staring at viewer */
+.playpen-kitten.staring .kitten-head-group {
+  transform: scale(1.05) translateY(1px);
+}
+
+.playpen-kitten.staring .kitten-svg-wrapper {
+  animation: stare-sway 2.5s ease-in-out infinite alternate !important;
+}
+
+@keyframes stare-sway {
+  0% { transform: rotate(-2deg); }
+  100% { transform: rotate(2deg); }
+}
+
 
 

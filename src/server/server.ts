@@ -180,6 +180,29 @@ async function saveProfile(username: string, profile: PlayerProfile): Promise<vo
   await redis.set(`catagotchi:profile:${username}`, JSON.stringify(profile));
 }
 
+async function getLeaderboard(subredditName: string): Promise<{ username: string, score: number }[]> {
+  const raw = await redis.get(`catagotchi:leaderboard:${subredditName}`);
+  return raw ? JSON.parse(raw) : [];
+}
+
+async function updateLeaderboard(username: string, score: number, subredditName: string): Promise<{ username: string, score: number }[]> {
+  const raw = await redis.get(`catagotchi:leaderboard:${subredditName}`);
+  let leaderboard: { username: string, score: number }[] = raw ? JSON.parse(raw) : [];
+  
+  const idx = leaderboard.findIndex((x) => x.username === username);
+  if (idx !== -1) {
+    leaderboard[idx].score = score;
+  } else {
+    leaderboard.push({ username, score });
+  }
+  
+  leaderboard.sort((a, b) => b.score - a.score);
+  leaderboard = leaderboard.slice(0, 10);
+  
+  await redis.set(`catagotchi:leaderboard:${subredditName}`, JSON.stringify(leaderboard));
+  return leaderboard;
+}
+
 async function checkIsModerator(username: string, subredditName: string): Promise<boolean> {
   try {
     const moderators = await reddit.getModerators({
@@ -406,6 +429,7 @@ async function onInit(): Promise<InitResponse> {
   }
 
   const logs = await getLogs(subredditName);
+  const leaderboard = await getLeaderboard(subredditName);
 
   return {
     type: "init",
@@ -417,6 +441,7 @@ async function onInit(): Promise<InitResponse> {
     cats,
     logs,
     profile,
+    leaderboard,
   };
 }
 
@@ -439,6 +464,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
       cats,
       logs: await getLogs(subredditName),
       profile,
+      leaderboard: await getLeaderboard(subredditName),
     };
   }
 
@@ -503,6 +529,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
 
   await saveKittens(subredditName, kittens);
   const logs = await getLogs(subredditName);
+  const leaderboard = await updateLeaderboard(username, profile.actionsPerformed, subredditName);
 
   return {
     success: true,
@@ -511,6 +538,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
     cats,
     logs,
     profile,
+    leaderboard,
   };
 }
 
