@@ -397,6 +397,14 @@ async function onInit(): Promise<InitResponse> {
     kittens = await getKittens(subredditName);
   }
 
+  // 4. Auto-Spawn stray if litter is still completely empty
+  if (kittens.length === 0) {
+    const stray = generateKitten("Stray", subredditName);
+    kittens.push(stray);
+    await saveKittens(subredditName, kittens);
+    await addLog(subredditName, `🐱 A new stray kitten named ${stray.name} wandered into the empty litter!`);
+  }
+
   const logs = await getLogs(subredditName);
 
   return {

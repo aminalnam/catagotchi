@@ -66,34 +66,34 @@ const btnWarp12 = document.getElementById("btn-warp-12") as HTMLButtonElement;
 const btnWarp72 = document.getElementById("btn-warp-72") as HTMLButtonElement;
 
 // Generate SVG Code for Kitten/Cat
-function getKittenSvg(color: string, eyesType: string, isCat: boolean): string {
+function getKittenSvg(color: string, eyesType: string, isCat: boolean, headOnly: boolean = false): string {
   let eyesSvg = "";
   switch (eyesType) {
     case "happy":
       eyesSvg = `
-        <path d="M 25 48 Q 34 38 43 48" stroke="#000" stroke-width="5" stroke-linecap="round" fill="none"/>
-        <path d="M 57 48 Q 66 38 75 48" stroke="#000" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M 25 48 Q 34 37 43 48" stroke="#000" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+        <path d="M 57 48 Q 66 37 75 48" stroke="#000" stroke-width="5.5" stroke-linecap="round" fill="none"/>
       `;
       break;
     case "sad":
       eyesSvg = `
-        <circle cx="34" cy="46" r="9" fill="#fff" stroke="#000" stroke-width="4.5"/>
-        <circle cx="66" cy="46" r="9" fill="#fff" stroke="#000" stroke-width="4.5"/>
-        <path d="M 24 38 L 33 42" stroke="#000" stroke-width="4" stroke-linecap="round"/>
-        <path d="M 76 38 L 67 42" stroke="#000" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="34" cy="46" r="9" fill="#fff" stroke="#000" stroke-width="5"/>
+        <circle cx="66" cy="46" r="9" fill="#fff" stroke="#000" stroke-width="5"/>
+        <path d="M 23 37 L 33 42" stroke="#000" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M 77 37 L 67 42" stroke="#000" stroke-width="4.5" stroke-linecap="round"/>
       `;
       break;
     case "sleeping":
       eyesSvg = `
-        <path d="M 25 46 H 43" stroke="#000" stroke-width="5.5" stroke-linecap="round"/>
-        <path d="M 57 46 H 75" stroke="#000" stroke-width="5.5" stroke-linecap="round"/>
+        <path d="M 24 46 H 44" stroke="#000" stroke-width="6" stroke-linecap="round"/>
+        <path d="M 56 46 H 76" stroke="#000" stroke-width="6" stroke-linecap="round"/>
       `;
       break;
     case "normal":
     default:
       eyesSvg = `
-        <circle cx="34" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="4.5"/>
-        <circle cx="66" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="4.5"/>
+        <circle cx="34" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="5"/>
+        <circle cx="66" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="5"/>
       `;
       break;
   }
@@ -101,68 +101,102 @@ function getKittenSvg(color: string, eyesType: string, isCat: boolean): string {
   const scale = isCat ? "scale(1.18)" : "scale(1)";
   const translate = isCat ? "translate(-8, -13)" : "translate(0, 0)";
   
+  if (headOnly) {
+    return `
+      <svg viewBox="10 10 80 80" class="svg-kitten">
+        <!-- Head Silhouette -->
+        <path d="M 36 24 L 12 15 Q 15 28, 22 38 L 15 41 L 23 45 L 16 49 L 24 53 Q 50 70, 76 53 L 84 49 L 77 45 L 85 41 L 78 38 Q 85 28, 88 15 L 64 24 L 59 23 L 57 16 L 51 22 L 48 17 L 43 23 L 40 18 Z" fill="${color}" stroke="#000" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+        
+        <!-- Inner Ears -->
+        <path d="M 32 23 L 16 18 Q 18 26, 22 32 Z" fill="#FF8A5B"/>
+        <path d="M 68 23 L 84 18 Q 82 26, 78 32 Z" fill="#FF8A5B"/>
+        
+        <!-- Forehead Tufts -->
+        <path d="M 43 31 Q 46.5 27 50 31 Q 53.5 27 57 31" stroke="rgba(0,0,0,0.25)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        
+        <!-- Whiskers -->
+        <line x1="26" y1="50" x2="31" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="25" y1="53" x2="30" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="26" y1="56" x2="31" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="74" y1="50" x2="69" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="75" y1="53" x2="70" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="74" y1="56" x2="69" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+        
+        <!-- Tongue Blep -->
+        <path d="M 47 56 C 47 65, 53 65, 53 56 Z" fill="#ff4d79" stroke="#000" stroke-width="4.5"/>
+        <line x1="50" y1="56" x2="50" y2="61" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+        
+        <!-- Mouth -->
+        <path d="M 42 55 Q 46 60 50 55 Q 54 60 58 55" stroke="#000" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+        
+        <!-- Nose -->
+        <ellipse cx="50" cy="53" rx="5" ry="3.5" fill="#ff7da0" stroke="#000" stroke-width="4"/>
+        
+        <!-- Eyes -->
+        ${eyesSvg}
+        
+        <!-- Collar -->
+        ${isCat ? `
+          <path d="M 33 60 Q 50 65 67 60" stroke="#f43f5e" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+          <circle cx="50" cy="64" r="5" fill="#fbbf24" stroke="#000" stroke-width="2"/>
+        ` : ""}
+      </svg>
+    `;
+  }
+
   return `
     <svg viewBox="0 0 100 100" class="svg-kitten" style="transform: ${translate} ${scale};">
       <!-- Tail -->
-      <path d="M 72 80 Q 86 68 81 48 Q 76 38 83 28" stroke="${color}" stroke-width="6.5" stroke-linecap="round" fill="none"/>
-      <path d="M 72 80 Q 86 68 81 48 Q 76 38 83 28" stroke="#000" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+      <path d="M 72 80 Q 86 68 81 48 Q 76 38 83 28" stroke="#000" stroke-width="7.5" stroke-linecap="round" fill="none"/>
+      <path d="M 72 80 Q 86 68 81 48 Q 76 38 83 28" stroke="${color}" stroke-width="4.5" stroke-linecap="round" fill="none"/>
       
       <!-- Body -->
-      <ellipse cx="50" cy="73" rx="25" ry="17" fill="${color}" stroke="#000" stroke-width="4"/>
+      <ellipse cx="50" cy="73" rx="25" ry="17" fill="${color}" stroke="#000" stroke-width="5"/>
       <ellipse cx="50" cy="75" rx="18" ry="11" fill="rgba(255,255,255,0.2)"/>
       
       <!-- Paws -->
-      <circle cx="35" cy="88" r="6" fill="${color}" stroke="#000" stroke-width="3"/>
-      <circle cx="45" cy="89" r="6" fill="${color}" stroke="#000" stroke-width="3"/>
-      <circle cx="55" cy="89" r="6" fill="${color}" stroke="#000" stroke-width="3"/>
-      <circle cx="65" cy="88" r="6" fill="${color}" stroke="#000" stroke-width="3"/>
+      <circle cx="35" cy="88" r="6" fill="${color}" stroke="#000" stroke-width="4.5"/>
+      <circle cx="45" cy="89" r="6" fill="${color}" stroke="#000" stroke-width="4.5"/>
+      <circle cx="55" cy="89" r="6" fill="${color}" stroke="#000" stroke-width="4.5"/>
+      <circle cx="65" cy="88" r="6" fill="${color}" stroke="#000" stroke-width="4.5"/>
       
-      <!-- Spikes on cheeks (fur tufts) to match reference image -->
-      <!-- Left Spikes -->
-      <polygon points="21,46 14,49 21,52" fill="${color}" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
-      <polygon points="21,53 13,57 21,60" fill="${color}" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+      <!-- Head Silhouette (combines base, ears, cheek spikes, and top tufts to avoid inner outlines) -->
+      <path d="M 36 24 L 12 15 Q 15 28, 22 38 L 15 41 L 23 45 L 16 49 L 24 53 Q 50 70, 76 53 L 84 49 L 77 45 L 85 41 L 78 38 Q 85 28, 88 15 L 64 24 L 59 23 L 57 16 L 51 22 L 48 17 L 43 23 L 40 18 Z" fill="${color}" stroke="#000" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
       
-      <!-- Right Spikes -->
-      <polygon points="79,46 86,49 79,52" fill="${color}" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
-      <polygon points="79,53 87,57 79,60" fill="${color}" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
-      
-      <!-- Ears -->
-      <polygon points="24,34 10,12 34,20" fill="${color}" stroke="#000" stroke-width="4.5" stroke-linejoin="round"/>
-      <polygon points="23,30 14,17 31,21" fill="#FF8A5B"/>
-      
-      <polygon points="76,34 90,12 66,20" fill="${color}" stroke="#000" stroke-width="4.5" stroke-linejoin="round"/>
-      <polygon points="77,30 86,17 69,21" fill="#FF8A5B"/>
-      
-      <!-- Head Base -->
-      <ellipse cx="50" cy="46" rx="30" ry="22" fill="${color}" stroke="#000" stroke-width="4.5"/>
+      <!-- Inner Ears -->
+      <path d="M 32 23 L 16 18 Q 18 26, 22 32 Z" fill="#FF8A5B"/>
+      <path d="M 68 23 L 84 18 Q 82 26, 78 32 Z" fill="#FF8A5B"/>
       
       <!-- Forehead Tufts (double-arch forehead marking) -->
-      <path d="M 44 32 Q 47 28 50 32 Q 53 28 56 32" stroke="rgba(0,0,0,0.15)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+      <path d="M 43 31 Q 46.5 27 50 31 Q 53.5 27 57 31" stroke="rgba(0,0,0,0.25)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
       
       <!-- Cheek whisker markings -->
       <!-- Left Cheek -->
-      <line x1="26" y1="54" x2="31" y2="54" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="25" y1="57" x2="29" y2="58" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="26" y1="50" x2="31" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="25" y1="53" x2="30" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="26" y1="56" x2="31" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
       <!-- Right Cheek -->
-      <line x1="74" y1="54" x2="69" y2="54" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-linecap="round"/>
-      <line x1="75" y1="57" x2="71" y2="58" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="74" y1="50" x2="69" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="75" y1="53" x2="70" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="74" y1="56" x2="69" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
       
       <!-- Tongue Blep (draw behind mouth lines for neat outline intersection) -->
-      <path d="M 47 58 C 47 67, 53 67, 53 58 Z" fill="#ff4d79" stroke="#000" stroke-width="4"/>
+      <path d="M 47 56 C 47 65, 53 65, 53 56 Z" fill="#ff4d79" stroke="#000" stroke-width="4.5"/>
+      <line x1="50" y1="56" x2="50" y2="61" stroke="#000" stroke-width="3" stroke-linecap="round"/>
       
       <!-- Mouth curves -->
-      <path d="M 43 59 Q 50 63 50 58 Q 50 63 57 59" stroke="#000" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <path d="M 42 55 Q 46 60 50 55 Q 54 60 58 55" stroke="#000" stroke-width="4.5" stroke-linecap="round" fill="none"/>
       
       <!-- Nose -->
-      <ellipse cx="50" cy="56" rx="4.5" ry="3.2" fill="#ff7da0" stroke="#000" stroke-width="3"/>
+      <ellipse cx="50" cy="53" rx="5" ry="3.5" fill="#ff7da0" stroke="#000" stroke-width="4"/>
       
       <!-- Eyes -->
       ${eyesSvg}
       
       <!-- Collar for Mature Cats -->
       ${isCat ? `
-        <path d="M 33 59 Q 50 64 67 59" stroke="#f43f5e" stroke-width="5" stroke-linecap="round" fill="none"/>
-        <circle cx="50" cy="63" r="4.5" fill="#fbbf24" stroke="#000" stroke-width="1.5"/>
+        <path d="M 33 60 Q 50 65 67 60" stroke="#f43f5e" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+        <circle cx="50" cy="64" r="5" fill="#fbbf24" stroke="#000" stroke-width="2"/>
       ` : ""}
     </svg>
   `;
@@ -302,7 +336,7 @@ function renderLitterList() {
 
     card.innerHTML = `
       <div class="kitten-avatar-mini" style="background: rgba(0,0,0,0.15)">
-        🐱
+        ${getKittenSvg(k.color, "normal", false, true)}
       </div>
       <div class="kitten-card-info">
         <div class="kitten-card-name" style="color: ${k.color}">${k.name}</div>
@@ -342,7 +376,9 @@ function renderSanctuaryGallery() {
     const item = document.createElement("div");
     item.className = `cat-gallery-item ${selectedKitten && selectedKitten.id === c.id ? "active" : ""}`;
     item.innerHTML = `
-      <span>🐱</span>
+      <div class="cat-avatar-mini">
+        ${getKittenSvg(c.color, "happy", true, true)}
+      </div>
       <div class="cat-gallery-name" style="color: ${c.color}">${c.name}</div>
     `;
     
