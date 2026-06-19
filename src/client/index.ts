@@ -11,6 +11,8 @@ import {
   type TimeWarpRequest,
   type TimeWarpResponse,
   type CareActionType,
+  type KittenPersonality,
+  PERSONALITY_MAP,
 } from "../shared/api.ts";
 
 // State
@@ -33,6 +35,7 @@ const leaderboardList = document.getElementById("leaderboard-list") as HTMLDivEl
 const petName = document.getElementById("pet-name") as HTMLHeadingElement;
 const petStageBadge = document.getElementById("pet-stage-badge") as HTMLSpanElement;
 const petPersonalityBadge = document.getElementById("pet-personality-badge") as HTMLSpanElement;
+const petPersonalityDesc = document.getElementById("pet-personality-desc") as HTMLParagraphElement;
 const petOwner = document.getElementById("pet-owner") as HTMLSpanElement;
 const kittenVisual = document.getElementById("kitten-visual") as HTMLDivElement;
 const petSpeech = document.getElementById("pet-speech") as HTMLDivElement;
@@ -257,6 +260,7 @@ function updateActivePetDisplay() {
     petName.textContent = "Adopt a Kitten!";
     petStageBadge.classList.add("hidden");
     petPersonalityBadge.classList.add("hidden");
+    petPersonalityDesc.classList.add("hidden");
     petOwner.textContent = "u/-";
     statusBalloon.classList.add("hidden");
     
@@ -285,22 +289,31 @@ function updateActivePetDisplay() {
   petOwner.textContent = `u/${selectedKitten.ownerUser}`;
 
   if (selectedKitten.stage === "kitten") {
-    const p = selectedKitten.personality || "lazy";
-    petPersonalityBadge.textContent = p;
-    petPersonalityBadge.classList.remove("hidden");
-    
-    // Custom colors for personalities
-    if (p === "hyper") {
-      petPersonalityBadge.style.background = "#f59e0b"; // Orange
-    } else if (p === "grumpy") {
-      petPersonalityBadge.style.background = "#ef4444"; // Red
-    } else if (p === "shy") {
-      petPersonalityBadge.style.background = "#10b981"; // Emerald
+    const p = selectedKitten.personality || "shironeko";
+    const meta = PERSONALITY_MAP[p];
+    if (meta) {
+      petPersonalityBadge.textContent = meta.displayName;
+      petPersonalityBadge.classList.remove("hidden");
+      petPersonalityDesc.textContent = meta.subtitle;
+      petPersonalityDesc.classList.remove("hidden");
+      
+      const arch = meta.archetype;
+      if (arch === "hyper") {
+        petPersonalityBadge.style.background = "#f59e0b"; // Orange
+      } else if (arch === "grumpy") {
+        petPersonalityBadge.style.background = "#ef4444"; // Red
+      } else if (arch === "shy") {
+        petPersonalityBadge.style.background = "#10b981"; // Emerald
+      } else {
+        petPersonalityBadge.style.background = "#8b5cf6"; // Purple (Lazy)
+      }
     } else {
-      petPersonalityBadge.style.background = "#8b5cf6"; // Purple (Lazy)
+      petPersonalityBadge.classList.add("hidden");
+      petPersonalityDesc.classList.add("hidden");
     }
   } else {
     petPersonalityBadge.classList.add("hidden");
+    petPersonalityDesc.classList.add("hidden");
   }
 
   // Enable/Disable Rename
@@ -779,41 +792,6 @@ const BEHAVIOR_SPEECHES: Record<string, string[]> = {
   ]
 };
 
-const PERSONALITY_SPEECHES: Record<string, string[]> = {
-  lazy: [
-    "5 more minutes... 💤",
-    "*yawn* So sleepy...",
-    "Nap time is the best time.",
-    "Can I sleep here? 😴",
-    "Walking is too much work...",
-    "Is it dinner time yet? 🐟"
-  ],
-  hyper: [
-    "Zoomies! 💨",
-    "Catch me if you can! ⚡",
-    "So much energy! 😺",
-    "What's next? Let's play! 🧶",
-    "Zoom zoom zoom! 🏎️",
-    "Pounce! 🐾"
-  ],
-  grumpy: [
-    "No touchy. 😠",
-    "Hmph.",
-    "Go away, hooman. 😾",
-    "Not in the mood.",
-    "Who woke me up? 💢",
-    "Meh. 🙄"
-  ],
-  shy: [
-    "Please don't look... 🙈",
-    "*hides behind paws*",
-    "It's loud out there...",
-    "Is it safe? 🥺",
-    "Quiet corners are nice.",
-    "Oh! You startled me! 🙀"
-  ]
-};
-
 function renderPlaypen() {
   // Clear any existing playpen kittens
   const existingKittens = document.querySelectorAll(".playpen-kitten");
@@ -836,15 +814,18 @@ function renderPlaypen() {
   // Render each active kitten in the playpen
   kittensList.forEach((k) => {
     let state = playpenStates.get(k.id);
+    const pers = k.personality || 'shironeko';
+    const meta = PERSONALITY_MAP[pers];
+    const arch = meta ? meta.archetype : 'lazy';
+
     if (!state) {
       const initialX = 15 + Math.random() * 60;
-      const pers = k.personality || 'lazy';
       let speed = 0.12 + Math.random() * 0.1;
-      if (pers === 'lazy') {
+      if (arch === 'lazy') {
         speed = 0.05 + Math.random() * 0.04;
-      } else if (pers === 'hyper') {
+      } else if (arch === 'hyper') {
         speed = 0.24 + Math.random() * 0.12;
-      } else if (pers === 'shy') {
+      } else if (arch === 'shy') {
         speed = 0.10 + Math.random() * 0.05;
       }
 
@@ -864,14 +845,14 @@ function renderPlaypen() {
 
     const kDiv = document.createElement("div");
     // Class includes behavior and personality for CSS animations
-    kDiv.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${k.personality || 'lazy'}`;
+    kDiv.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch}`;
     kDiv.setAttribute("data-id", k.id);
     kDiv.style.left = `${state.x}%`;
 
     const flipStyle = state.isFlipped ? "transform: scaleX(-1);" : "transform: scaleX(1);";
     
     // Napping override: show sleeping eyes; Grumpy override: show grumpy eyes
-    const renderEyes = state.behavior === "napping" ? "sleeping" : (k.eyes === "normal" && k.personality === "grumpy" ? "grumpy" : k.eyes);
+    const renderEyes = state.behavior === "napping" ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes);
 
     kDiv.innerHTML = `
       <div class="kitten-speech-bubble hidden">
@@ -925,6 +906,10 @@ setInterval(() => {
 
     const svgWrap = el.querySelector(".kitten-svg-wrapper") as HTMLDivElement;
 
+    const pers = k.personality || 'shironeko';
+    const meta = PERSONALITY_MAP[pers];
+    const arch = meta ? meta.archetype : 'lazy';
+
     // 1. Behavior State Machine Ticker
     state.behaviorTimer--;
     if (state.behaviorTimer <= 0) {
@@ -932,9 +917,7 @@ setInterval(() => {
       const roll = Math.random();
       let nextBehavior: 'wandering' | 'napping' | 'grooming' | 'staring' | 'chasing';
       
-      const pers = k.personality || 'lazy';
-      
-      if (pers === 'lazy') {
+      if (arch === 'lazy') {
         // Lazy: 50% nap (long), 25% wander (slow), 15% stare, 5% grooming, 5% chasing
         if (roll < 0.25) {
           nextBehavior = 'wandering';
@@ -961,7 +944,7 @@ setInterval(() => {
           state.isWalking = true;
           state.speed = 0.18 + Math.random() * 0.05;
         }
-      } else if (pers === 'hyper') {
+      } else if (arch === 'hyper') {
         // Hyper: 45% wander (fast), 10% nap (short), 10% grooming, 10% staring, 25% chasing (very fast)
         if (roll < 0.45) {
           nextBehavior = 'wandering';
@@ -988,7 +971,7 @@ setInterval(() => {
           state.isWalking = true;
           state.speed = 0.65 + Math.random() * 0.15; // Zooming chase!
         }
-      } else if (pers === 'shy') {
+      } else if (arch === 'shy') {
         // Shy: Restricts target coordinates near margins (15%-30% or 70%-85%)
         // 35% wander, 25% nap, 20% grooming, 15% staring, 5% chasing
         if (roll < 0.35) {
@@ -1048,10 +1031,10 @@ setInterval(() => {
       state.behavior = nextBehavior;
       
       // Update DOM classes for CSS animations
-      el.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${pers}`;
+      el.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch}`;
       
       // Re-render SVG to show correct eyes
-      const renderEyes = state.behavior === "napping" ? "sleeping" : (k.eyes === "normal" && k.personality === "grumpy" ? "grumpy" : k.eyes);
+      const renderEyes = state.behavior === "napping" ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes);
       if (svgWrap) {
         svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat");
       }
@@ -1059,8 +1042,8 @@ setInterval(() => {
       // 60% chance to say something about new behavior
       if (Math.random() < 0.6) {
         let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
-        if (Math.random() < 0.5 && k.personality && PERSONALITY_SPEECHES[k.personality]) {
-          pool = PERSONALITY_SPEECHES[k.personality];
+        if (Math.random() < 0.5 && meta && meta.speeches) {
+          pool = meta.speeches;
         }
         const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
         showKittenSpeech(k.id, randomText);
@@ -1078,8 +1061,8 @@ setInterval(() => {
         // 20% chance to speak on arrival
         if (Math.random() < 0.2) {
           let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
-          if (k.personality && PERSONALITY_SPEECHES[k.personality] && Math.random() < 0.5) {
-            pool = PERSONALITY_SPEECHES[k.personality];
+          if (meta && meta.speeches && Math.random() < 0.5) {
+            pool = meta.speeches;
           }
           const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
           showKittenSpeech(k.id, randomText);
@@ -1098,8 +1081,8 @@ setInterval(() => {
       // 0.4% chance to meow/speak while sitting
       if (Math.random() < 0.004) {
         let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
-        if (k.personality && PERSONALITY_SPEECHES[k.personality] && Math.random() < 0.6) {
-          pool = PERSONALITY_SPEECHES[k.personality];
+        if (meta && meta.speeches && Math.random() < 0.6) {
+          pool = meta.speeches;
         }
         const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
         showKittenSpeech(k.id, randomText);
@@ -1139,19 +1122,22 @@ playpenViewport.addEventListener("click", (e) => {
     const state = playpenStates.get(k.id);
     if (!state) return;
 
+    const pers = k.personality || 'shironeko';
+    const meta = PERSONALITY_MAP[pers];
+    const arch = meta ? meta.archetype : 'lazy';
+
     // Laser chase behavior:
     state.behavior = 'chasing';
     // Laser coordinate is the new targetX
     state.targetX = Math.max(10, Math.min(90, pctX));
     state.isWalking = true;
     
-    // Set custom chase speed based on personality
-    const pers = k.personality || 'lazy';
-    if (pers === 'lazy') {
+    // Set custom chase speed based on personality archetype
+    if (arch === 'lazy') {
       state.speed = 0.22 + Math.random() * 0.08;
-    } else if (pers === 'hyper') {
+    } else if (arch === 'hyper') {
       state.speed = 0.70 + Math.random() * 0.20;
-    } else if (pers === 'shy') {
+    } else if (arch === 'shy') {
       state.speed = 0.35 + Math.random() * 0.10;
     } else {
       state.speed = 0.45 + Math.random() * 0.15;
@@ -1163,7 +1149,7 @@ playpenViewport.addEventListener("click", (e) => {
     // Update DOM class to apply running animations
     const el = document.querySelector(`.playpen-kitten[data-id="${k.id}"]`) as HTMLDivElement;
     if (el) {
-      el.className = `playpen-kitten chasing ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${pers}`;
+      el.className = `playpen-kitten chasing ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch}`;
       
       const svgWrap = el.querySelector(".kitten-svg-wrapper") as HTMLDivElement;
       if (svgWrap) {

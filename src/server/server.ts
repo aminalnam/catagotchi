@@ -15,6 +15,8 @@ import {
   type TimeWarpRequest,
   type TimeWarpResponse,
   type CareActionType,
+  type KittenPersonality,
+  PERSONALITY_MAP,
 } from "../shared/api.ts";
 
 // Configurable constants
@@ -220,8 +222,8 @@ async function checkIsModerator(username: string, subredditName: string): Promis
 function generateKitten(ownerUser: string, originSub: string): Kitten {
   const name = KITTEN_NAMES[Math.floor(Math.random() * KITTEN_NAMES.length)] || "Snoo";
   const color = KITTEN_COLORS[Math.floor(Math.random() * KITTEN_COLORS.length)] || "#B5EAD7";
-  const personalities: ("lazy" | "hyper" | "grumpy" | "shy")[] = ["lazy", "hyper", "grumpy", "shy"];
-  const personality = personalities[Math.floor(Math.random() * personalities.length)] || "lazy";
+  const personalities = Object.keys(PERSONALITY_MAP) as KittenPersonality[];
+  const personality = personalities[Math.floor(Math.random() * personalities.length)] || "shironeko";
   
   return {
     id: `k-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -260,18 +262,12 @@ async function progressTime(subredditName: string, hoursElapsed: number): Promis
     let happinessMult = 1.0;
     let cleanlinessMult = 1.0;
     
-    const p = k.personality || "lazy";
-    if (p === "lazy") {
-      hungerMult = 0.7;
-      happinessMult = 0.7;
-      cleanlinessMult = 0.7;
-    } else if (p === "hyper") {
-      hungerMult = 1.4;
-      cleanlinessMult = 1.4;
-    } else if (p === "grumpy") {
-      happinessMult = 1.3;
-    } else if (p === "shy") {
-      happinessMult = 1.1;
+    const p = k.personality || "shironeko";
+    const meta = PERSONALITY_MAP[p];
+    if (meta) {
+      hungerMult = meta.decayMultipliers.hunger;
+      happinessMult = meta.decayMultipliers.happiness;
+      cleanlinessMult = meta.decayMultipliers.cleanliness;
     }
 
     // 1. Decay Stats
