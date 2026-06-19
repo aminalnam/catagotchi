@@ -71,31 +71,29 @@ function getKittenSvg(color: string, eyesType: string, isCat: boolean): string {
   switch (eyesType) {
     case "happy":
       eyesSvg = `
-        <path d="M 35 46 Q 40 40 45 46" stroke="#1e293b" stroke-width="3" stroke-linecap="round" fill="none"/>
-        <path d="M 55 46 Q 60 40 65 46" stroke="#1e293b" stroke-width="3" stroke-linecap="round" fill="none"/>
+        <path d="M 25 48 Q 34 38 43 48" stroke="#000" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M 57 48 Q 66 38 75 48" stroke="#000" stroke-width="5" stroke-linecap="round" fill="none"/>
       `;
       break;
     case "sad":
       eyesSvg = `
-        <path d="M 35 48 Q 40 43 45 48" stroke="#1e293b" stroke-width="3" stroke-linecap="round" fill="none"/>
-        <path d="M 55 48 Q 60 43 65 48" stroke="#1e293b" stroke-width="3" stroke-linecap="round" fill="none"/>
-        <path d="M 33 42 L 39 44" stroke="#1e293b" stroke-width="2" stroke-linecap="round"/>
-        <path d="M 67 42 L 61 44" stroke="#1e293b" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="34" cy="46" r="9" fill="#fff" stroke="#000" stroke-width="4.5"/>
+        <circle cx="66" cy="46" r="9" fill="#fff" stroke="#000" stroke-width="4.5"/>
+        <path d="M 24 38 L 33 42" stroke="#000" stroke-width="4" stroke-linecap="round"/>
+        <path d="M 76 38 L 67 42" stroke="#000" stroke-width="4" stroke-linecap="round"/>
       `;
       break;
     case "sleeping":
       eyesSvg = `
-        <line x1="34" y1="46" x2="44" y2="46" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round"/>
-        <line x1="56" y1="46" x2="66" y2="46" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M 25 46 H 43" stroke="#000" stroke-width="5.5" stroke-linecap="round"/>
+        <path d="M 57 46 H 75" stroke="#000" stroke-width="5.5" stroke-linecap="round"/>
       `;
       break;
     case "normal":
     default:
       eyesSvg = `
-        <circle cx="39" cy="46" r="4.5" fill="#1e293b"/>
-        <circle cx="61" cy="46" r="4.5" fill="#1e293b"/>
-        <circle cx="37.5" cy="44.5" r="1.5" fill="white"/>
-        <circle cx="59.5" cy="44.5" r="1.5" fill="white"/>
+        <circle cx="34" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="4.5"/>
+        <circle cx="66" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="4.5"/>
       `;
       break;
   }
@@ -107,49 +105,64 @@ function getKittenSvg(color: string, eyesType: string, isCat: boolean): string {
     <svg viewBox="0 0 100 100" class="svg-kitten" style="transform: ${translate} ${scale};">
       <!-- Tail -->
       <path d="M 72 80 Q 86 68 81 48 Q 76 38 83 28" stroke="${color}" stroke-width="6.5" stroke-linecap="round" fill="none"/>
+      <path d="M 72 80 Q 86 68 81 48 Q 76 38 83 28" stroke="#000" stroke-width="1.5" stroke-linecap="round" fill="none"/>
       
       <!-- Body -->
-      <ellipse cx="50" cy="73" rx="25" ry="17" fill="${color}" stroke="#1e293b" stroke-width="2.5"/>
+      <ellipse cx="50" cy="73" rx="25" ry="17" fill="${color}" stroke="#000" stroke-width="4"/>
       <ellipse cx="50" cy="75" rx="18" ry="11" fill="rgba(255,255,255,0.2)"/>
       
       <!-- Paws -->
-      <circle cx="35" cy="88" r="6" fill="${color}" stroke="#1e293b" stroke-width="2"/>
-      <circle cx="45" cy="89" r="6" fill="${color}" stroke="#1e293b" stroke-width="2"/>
-      <circle cx="55" cy="89" r="6" fill="${color}" stroke="#1e293b" stroke-width="2"/>
-      <circle cx="65" cy="88" r="6" fill="${color}" stroke="#1e293b" stroke-width="2"/>
+      <circle cx="35" cy="88" r="6" fill="${color}" stroke="#000" stroke-width="3"/>
+      <circle cx="45" cy="89" r="6" fill="${color}" stroke="#000" stroke-width="3"/>
+      <circle cx="55" cy="89" r="6" fill="${color}" stroke="#000" stroke-width="3"/>
+      <circle cx="65" cy="88" r="6" fill="${color}" stroke="#000" stroke-width="3"/>
+      
+      <!-- Spikes on cheeks (fur tufts) to match reference image -->
+      <!-- Left Spikes -->
+      <polygon points="21,46 14,49 21,52" fill="${color}" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+      <polygon points="21,53 13,57 21,60" fill="${color}" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+      
+      <!-- Right Spikes -->
+      <polygon points="79,46 86,49 79,52" fill="${color}" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+      <polygon points="79,53 87,57 79,60" fill="${color}" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
       
       <!-- Ears -->
-      <polygon points="24,34 13,8 39,24" fill="${color}" stroke="#1e293b" stroke-width="2.5" stroke-linejoin="round"/>
-      <polygon points="26,32 19,13 36,24" fill="#FFB7B2"/>
+      <polygon points="24,34 10,12 34,20" fill="${color}" stroke="#000" stroke-width="4.5" stroke-linejoin="round"/>
+      <polygon points="23,30 14,17 31,21" fill="#FF8A5B"/>
       
-      <polygon points="76,34 87,8 61,24" fill="${color}" stroke="#1e293b" stroke-width="2.5" stroke-linejoin="round"/>
-      <polygon points="74,32 81,13 64,24" fill="#FFB7B2"/>
+      <polygon points="76,34 90,12 66,20" fill="${color}" stroke="#000" stroke-width="4.5" stroke-linejoin="round"/>
+      <polygon points="77,30 86,17 69,21" fill="#FF8A5B"/>
       
-      <!-- Head -->
-      <ellipse cx="50" cy="45" rx="27" ry="21" fill="${color}" stroke="#1e293b" stroke-width="2.5"/>
+      <!-- Head Base -->
+      <ellipse cx="50" cy="46" rx="30" ry="22" fill="${color}" stroke="#000" stroke-width="4.5"/>
       
-      <!-- Cheeks -->
-      <circle cx="31" cy="53" r="4.5" fill="#FF9AA2" opacity="0.65"/>
-      <circle cx="69" cy="53" r="4.5" fill="#FF9AA2" opacity="0.65"/>
+      <!-- Forehead Tufts (double-arch forehead marking) -->
+      <path d="M 44 32 Q 47 28 50 32 Q 53 28 56 32" stroke="rgba(0,0,0,0.15)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
       
-      <!-- Whiskers -->
-      <line x1="22" y1="51" x2="7" y2="49" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
-      <line x1="22" y1="54" x2="5" y2="55" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
+      <!-- Cheek whisker markings -->
+      <!-- Left Cheek -->
+      <line x1="26" y1="54" x2="31" y2="54" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="25" y1="57" x2="29" y2="58" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Right Cheek -->
+      <line x1="74" y1="54" x2="69" y2="54" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="75" y1="57" x2="71" y2="58" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-linecap="round"/>
       
-      <line x1="78" y1="51" x2="93" y2="49" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
-      <line x1="78" y1="54" x2="95" y2="55" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
+      <!-- Tongue Blep (draw behind mouth lines for neat outline intersection) -->
+      <path d="M 47 58 C 47 67, 53 67, 53 58 Z" fill="#ff4d79" stroke="#000" stroke-width="4"/>
+      
+      <!-- Mouth curves -->
+      <path d="M 43 59 Q 50 63 50 58 Q 50 63 57 59" stroke="#000" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      
+      <!-- Nose -->
+      <ellipse cx="50" cy="56" rx="4.5" ry="3.2" fill="#ff7da0" stroke="#000" stroke-width="3"/>
       
       <!-- Eyes -->
       ${eyesSvg}
       
-      <!-- Nose & Mouth -->
-      <polygon points="48,51 52,51 50,53" fill="#ff6b6b"/>
-      <path d="M 47 55 Q 50 58 50 55 Q 50 58 53 55" stroke="#1e293b" stroke-width="2" stroke-linecap="round" fill="none"/>
-      
       <!-- Collar for Mature Cats -->
       ${isCat ? `
         <path d="M 33 59 Q 50 64 67 59" stroke="#f43f5e" stroke-width="5" stroke-linecap="round" fill="none"/>
-        <circle cx="50" cy="63" r="4.5" fill="#fbbf24" stroke="#1e293b" stroke-width="1.2"/>
+        <circle cx="50" cy="63" r="4.5" fill="#fbbf24" stroke="#000" stroke-width="1.5"/>
       ` : ""}
     </svg>
   `;
