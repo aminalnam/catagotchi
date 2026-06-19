@@ -33,6 +33,9 @@ const petName = document.getElementById("pet-name") as HTMLHeadingElement;
 const petStageBadge = document.getElementById("pet-stage-badge") as HTMLSpanElement;
 const petOwner = document.getElementById("pet-owner") as HTMLSpanElement;
 const kittenVisual = document.getElementById("kitten-visual") as HTMLDivElement;
+const petSpeech = document.getElementById("pet-speech") as HTMLDivElement;
+const petSpeechText = document.getElementById("pet-speech-text") as HTMLSpanElement;
+const btnSummonStray = document.getElementById("btn-summon-stray") as HTMLButtonElement;
 const particleEmitter = document.getElementById("particle-emitter") as HTMLDivElement;
 const statusBalloon = document.getElementById("status-balloon") as HTMLDivElement;
 
@@ -553,6 +556,95 @@ renameInput.addEventListener("keydown", (e) => {
 btnWarp1.addEventListener("click", () => performTimeWarp(1));
 btnWarp12.addEventListener("click", () => performTimeWarp(12));
 btnWarp72.addEventListener("click", () => performTimeWarp(72));
+
+// Summon Stray Handler
+btnSummonStray.addEventListener("click", async () => {
+  try {
+    const res = await fetch(ApiEndpoint.SpawnStray, { method: "POST" });
+    if (!res.ok) throw new Error("Spawn stray failed");
+    const data = await res.json();
+    kittensList = data.kittens;
+    catsList = data.cats;
+    
+    // Select the new stray kitten
+    if (kittensList.length > 0) {
+      selectedKitten = kittensList[kittensList.length - 1] || null;
+    }
+    
+    renderLitterList();
+    renderSanctuaryGallery();
+    renderLogs(data.logs);
+    updateActivePetDisplay();
+    triggerParticles("🐱");
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+// Autonomous behaviors data and logic
+const AUTONOMOUS_SPEECHES = [
+  "Meow! 🐾",
+  "Purrr... 😻",
+  "Zzz... 💤",
+  "Chasing a laser dot! 🔴",
+  "Catching dust bunnies!",
+  "Knocked over the milk... 🥛",
+  "Where's my fish? 🐟",
+  "Can you scratch my ears? 😸",
+  "*stretches*",
+  "*licks paws*",
+  "I love this subreddit! ❤️",
+  "Wandering around...",
+  "Napping in the sun... ☀️"
+];
+
+function showSpeechBubble(text: string) {
+  if (!selectedKitten) return;
+  petSpeechText.textContent = text;
+  petSpeech.classList.remove("hidden");
+  
+  setTimeout(() => {
+    petSpeech.classList.add("hidden");
+  }, 3500);
+}
+
+// Background autonomous behaviors ticker (every 8 seconds)
+setInterval(() => {
+  if (!selectedKitten) return;
+  if (selectedKitten.stage === "cat") return; // Cats are chilling, only kittens do crazy stuff!
+  
+  // 35% chance to perform an action on any tick
+  if (Math.random() > 0.35) return;
+
+  const actionRoll = Math.random();
+  if (actionRoll < 0.5) {
+    // Show random cute thoughts/meows
+    const randomText = AUTONOMOUS_SPEECHES[Math.floor(Math.random() * AUTONOMOUS_SPEECHES.length)] || "Meow!";
+    showSpeechBubble(randomText);
+  } else if (actionRoll < 0.8) {
+    // Wander movement action
+    const shiftPercent = Math.floor(Math.random() * 60) - 30; // Shift -30px to +30px
+    kittenVisual.style.transform = `translateX(${shiftPercent}px)`;
+    
+    showSpeechBubble("Exploring! 🐾");
+    
+    setTimeout(() => {
+      kittenVisual.style.transform = "none";
+    }, 3000);
+  } else {
+    // Expression blip (temporary blink/sleep)
+    const isCat = selectedKitten.stage === "cat";
+    const originalEyes = selectedKitten.eyes;
+    
+    kittenVisual.innerHTML = getKittenSvg(selectedKitten.color, "sleeping", isCat);
+    
+    setTimeout(() => {
+      if (selectedKitten) {
+        kittenVisual.innerHTML = getKittenSvg(selectedKitten.color, originalEyes, isCat);
+      }
+    }, 1500);
+  }
+}, 8000);
 
 // Initial Load & Polling Ticker
 fetchInit();

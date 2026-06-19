@@ -38,7 +38,10 @@
       
       <!-- Left Column: Litter List -->
       <section class="litter-sidebar">
-        <h2>Active Litter</h2>
+        <div class="sidebar-header-row">
+          <h2>Active Litter</h2>
+          <button id="btn-summon-stray" class="btn-primary btn-small" title="Summon a stray kitten to the litter">🐱 + Summon</button>
+        </div>
         <div id="kitten-list" class="kitten-cards-container">
           <!-- Dynamically populated -->
         </div>
@@ -60,6 +63,10 @@
 
           <!-- Pet Display Area -->
           <div id="pet-container" class="pet-wrapper">
+            <!-- Speech Bubble -->
+            <div id="pet-speech" class="pet-speech-bubble hidden">
+              <span id="pet-speech-text">Meow!</span>
+            </div>
             <!-- Animated SVG Cat/Kitten will be rendered here -->
             <div id="kitten-visual" class="kitten-sprite">
               <!-- SVG template injected dynamically -->

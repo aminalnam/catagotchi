@@ -3,6 +3,7 @@ export enum ApiEndpoint {
   Action = "/api/action",
   TimeWarp = "/api/time-warp",
   Rename = "/api/rename",
+  SpawnStray = "/api/spawn-stray",
   OnPostCreate = "/internal/menu/post-create",
   OnAppInstall = "/internal/on-app-install",
 }

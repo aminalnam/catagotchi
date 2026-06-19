@@ -81,6 +81,9 @@ async function onRequest(
     case ApiEndpoint.Rename:
       body = await onRename(req);
       break;
+    case ApiEndpoint.SpawnStray:
+      body = await onSpawnStray();
+      break;
     case ApiEndpoint.TimeWarp:
       body = await onTimeWarp(req);
       break;
@@ -534,6 +537,35 @@ async function onRename(req: IncomingMessage): Promise<RenameResponse> {
   await addLog(subredditName, `✏️ u/${username} renamed ${oldName} to ${cleanName}`);
 
   return { success: true, message: `Renamed to ${cleanName}`, kittens };
+}
+
+async function onSpawnStray(): Promise<any> {
+  const username = getUsername();
+  const subredditName = getSubredditName();
+
+  const kittens = await getKittens(subredditName);
+  
+  if (kittens.length >= 8) {
+    return { success: false, message: "Litter is full! We cannot fit any more stray kittens.", kittens };
+  }
+
+  const stray = generateKitten("Stray", subredditName);
+  kittens.push(stray);
+  await saveKittens(subredditName, kittens);
+  await addLog(subredditName, `🐱 A stray kitten named ${stray.name} wandered into our sanctuary, summoned by u/${username}!`);
+
+  const cats = await getCats(subredditName);
+  const logs = await getLogs(subredditName);
+  const profile = await getProfile(username);
+
+  return {
+    success: true,
+    message: `A stray kitten named ${stray.name} joined the litter!`,
+    kittens,
+    cats,
+    logs,
+    profile
+  };
 }
 
 // 4. Time Warp Admin testing tool
