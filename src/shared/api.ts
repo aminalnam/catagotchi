@@ -23,6 +23,7 @@ export interface Kitten {
   neglectedSince: number | null; // Timestamp when stats fell to 0
   originSubreddit: string;
   ownerUser: string;  // User who played for the first time and generated this kitten
+  personality: "lazy" | "hyper" | "grumpy" | "shy";
 }
 
 export interface GameLog {

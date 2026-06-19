@@ -32,6 +32,7 @@ const leaderboardList = document.getElementById("leaderboard-list") as HTMLDivEl
 
 const petName = document.getElementById("pet-name") as HTMLHeadingElement;
 const petStageBadge = document.getElementById("pet-stage-badge") as HTMLSpanElement;
+const petPersonalityBadge = document.getElementById("pet-personality-badge") as HTMLSpanElement;
 const petOwner = document.getElementById("pet-owner") as HTMLSpanElement;
 const kittenVisual = document.getElementById("kitten-visual") as HTMLDivElement;
 const petSpeech = document.getElementById("pet-speech") as HTMLDivElement;
@@ -39,6 +40,7 @@ const petSpeechText = document.getElementById("pet-speech-text") as HTMLSpanElem
 const btnSummonStray = document.getElementById("btn-summon-stray") as HTMLButtonElement;
 const particleEmitter = document.getElementById("particle-emitter") as HTMLDivElement;
 const statusBalloon = document.getElementById("status-balloon") as HTMLDivElement;
+const playpenViewport = document.querySelector(".playpen-viewport") as HTMLDivElement;
 
 const barHunger = document.getElementById("bar-hunger") as HTMLDivElement;
 const barHappiness = document.getElementById("bar-happiness") as HTMLDivElement;
@@ -82,6 +84,14 @@ function getKittenSvg(color: string, eyesType: string, isCat: boolean, headOnly:
         <circle cx="66" cy="46" r="9" fill="#fff" stroke="#000" stroke-width="5"/>
         <path d="M 23 37 L 33 42" stroke="#000" stroke-width="4.5" stroke-linecap="round"/>
         <path d="M 77 37 L 67 42" stroke="#000" stroke-width="4.5" stroke-linecap="round"/>
+      `;
+      break;
+    case "grumpy":
+      eyesSvg = `
+        <circle cx="34" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="5"/>
+        <circle cx="66" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="5"/>
+        <path d="M 21 34 L 43 41" stroke="#000" stroke-width="5.5" stroke-linecap="round"/>
+        <path d="M 79 34 L 57 41" stroke="#000" stroke-width="5.5" stroke-linecap="round"/>
       `;
       break;
     case "sleeping":
@@ -246,6 +256,7 @@ function updateActivePetDisplay() {
   if (!selectedKitten) {
     petName.textContent = "Adopt a Kitten!";
     petStageBadge.classList.add("hidden");
+    petPersonalityBadge.classList.add("hidden");
     petOwner.textContent = "u/-";
     statusBalloon.classList.add("hidden");
     
@@ -272,6 +283,25 @@ function updateActivePetDisplay() {
   petStageBadge.className = `badge ${selectedKitten.stage === "cat" ? "cat-stage" : ""}`;
   petStageBadge.classList.remove("hidden");
   petOwner.textContent = `u/${selectedKitten.ownerUser}`;
+
+  if (selectedKitten.stage === "kitten") {
+    const p = selectedKitten.personality || "lazy";
+    petPersonalityBadge.textContent = p;
+    petPersonalityBadge.classList.remove("hidden");
+    
+    // Custom colors for personalities
+    if (p === "hyper") {
+      petPersonalityBadge.style.background = "#f59e0b"; // Orange
+    } else if (p === "grumpy") {
+      petPersonalityBadge.style.background = "#ef4444"; // Red
+    } else if (p === "shy") {
+      petPersonalityBadge.style.background = "#10b981"; // Emerald
+    } else {
+      petPersonalityBadge.style.background = "#8b5cf6"; // Purple (Lazy)
+    }
+  } else {
+    petPersonalityBadge.classList.add("hidden");
+  }
 
   // Enable/Disable Rename
   const isOwner = selectedKitten.ownerUser === currentUsername;
@@ -749,6 +779,41 @@ const BEHAVIOR_SPEECHES: Record<string, string[]> = {
   ]
 };
 
+const PERSONALITY_SPEECHES: Record<string, string[]> = {
+  lazy: [
+    "5 more minutes... 💤",
+    "*yawn* So sleepy...",
+    "Nap time is the best time.",
+    "Can I sleep here? 😴",
+    "Walking is too much work...",
+    "Is it dinner time yet? 🐟"
+  ],
+  hyper: [
+    "Zoomies! 💨",
+    "Catch me if you can! ⚡",
+    "So much energy! 😺",
+    "What's next? Let's play! 🧶",
+    "Zoom zoom zoom! 🏎️",
+    "Pounce! 🐾"
+  ],
+  grumpy: [
+    "No touchy. 😠",
+    "Hmph.",
+    "Go away, hooman. 😾",
+    "Not in the mood.",
+    "Who woke me up? 💢",
+    "Meh. 🙄"
+  ],
+  shy: [
+    "Please don't look... 🙈",
+    "*hides behind paws*",
+    "It's loud out there...",
+    "Is it safe? 🥺",
+    "Quiet corners are nice.",
+    "Oh! You startled me! 🙀"
+  ]
+};
+
 function renderPlaypen() {
   // Clear any existing playpen kittens
   const existingKittens = document.querySelectorAll(".playpen-kitten");
@@ -773,13 +838,23 @@ function renderPlaypen() {
     let state = playpenStates.get(k.id);
     if (!state) {
       const initialX = 15 + Math.random() * 60;
+      const pers = k.personality || 'lazy';
+      let speed = 0.12 + Math.random() * 0.1;
+      if (pers === 'lazy') {
+        speed = 0.05 + Math.random() * 0.04;
+      } else if (pers === 'hyper') {
+        speed = 0.24 + Math.random() * 0.12;
+      } else if (pers === 'shy') {
+        speed = 0.10 + Math.random() * 0.05;
+      }
+
       state = {
         id: k.id,
         x: initialX,
         targetX: initialX,
         isWalking: false,
         isFlipped: Math.random() > 0.5,
-        speed: 0.12 + Math.random() * 0.1,
+        speed: speed,
         speechTimeout: null,
         behavior: 'wandering',
         behaviorTimer: 30 + Math.random() * 40,
@@ -788,15 +863,15 @@ function renderPlaypen() {
     }
 
     const kDiv = document.createElement("div");
-    // Class includes behavior for CSS animations
-    kDiv.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""}`;
+    // Class includes behavior and personality for CSS animations
+    kDiv.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${k.personality || 'lazy'}`;
     kDiv.setAttribute("data-id", k.id);
     kDiv.style.left = `${state.x}%`;
 
     const flipStyle = state.isFlipped ? "transform: scaleX(-1);" : "transform: scaleX(1);";
     
-    // Napping override: show sleeping eyes
-    const renderEyes = state.behavior === "napping" ? "sleeping" : k.eyes;
+    // Napping override: show sleeping eyes; Grumpy override: show grumpy eyes
+    const renderEyes = state.behavior === "napping" ? "sleeping" : (k.eyes === "normal" && k.personality === "grumpy" ? "grumpy" : k.eyes);
 
     kDiv.innerHTML = `
       <div class="kitten-speech-bubble hidden">
@@ -857,46 +932,136 @@ setInterval(() => {
       const roll = Math.random();
       let nextBehavior: 'wandering' | 'napping' | 'grooming' | 'staring' | 'chasing';
       
-      if (roll < 0.35) {
-        nextBehavior = 'wandering';
-        state.behaviorTimer = 40 + Math.floor(Math.random() * 50); // 4-9s
-        state.targetX = 15 + Math.random() * 60;
-        state.isWalking = true;
-        state.speed = 0.12 + Math.random() * 0.08;
-      } else if (roll < 0.6) {
-        nextBehavior = 'napping';
-        state.behaviorTimer = 80 + Math.floor(Math.random() * 100); // 8-18s
-        state.isWalking = false;
-      } else if (roll < 0.75) {
-        nextBehavior = 'grooming';
-        state.behaviorTimer = 40 + Math.floor(Math.random() * 40); // 4-8s
-        state.isWalking = false;
-      } else if (roll < 0.9) {
-        nextBehavior = 'staring';
-        state.behaviorTimer = 30 + Math.floor(Math.random() * 30); // 3-6s
-        state.isWalking = false;
+      const pers = k.personality || 'lazy';
+      
+      if (pers === 'lazy') {
+        // Lazy: 50% nap (long), 25% wander (slow), 15% stare, 5% grooming, 5% chasing
+        if (roll < 0.25) {
+          nextBehavior = 'wandering';
+          state.behaviorTimer = 30 + Math.floor(Math.random() * 40);
+          state.targetX = 15 + Math.random() * 60;
+          state.isWalking = true;
+          state.speed = 0.05 + Math.random() * 0.04; // Slow walking
+        } else if (roll < 0.75) {
+          nextBehavior = 'napping';
+          state.behaviorTimer = 120 + Math.floor(Math.random() * 120); // Long naps
+          state.isWalking = false;
+        } else if (roll < 0.90) {
+          nextBehavior = 'staring';
+          state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+          state.isWalking = false;
+        } else if (roll < 0.95) {
+          nextBehavior = 'grooming';
+          state.behaviorTimer = 30 + Math.floor(Math.random() * 30);
+          state.isWalking = false;
+        } else {
+          nextBehavior = 'chasing';
+          state.behaviorTimer = 20 + Math.floor(Math.random() * 20);
+          state.targetX = 15 + Math.random() * 60;
+          state.isWalking = true;
+          state.speed = 0.18 + Math.random() * 0.05;
+        }
+      } else if (pers === 'hyper') {
+        // Hyper: 45% wander (fast), 10% nap (short), 10% grooming, 10% staring, 25% chasing (very fast)
+        if (roll < 0.45) {
+          nextBehavior = 'wandering';
+          state.behaviorTimer = 30 + Math.floor(Math.random() * 45);
+          state.targetX = 15 + Math.random() * 60;
+          state.isWalking = true;
+          state.speed = 0.24 + Math.random() * 0.12; // Fast wander
+        } else if (roll < 0.55) {
+          nextBehavior = 'napping';
+          state.behaviorTimer = 30 + Math.floor(Math.random() * 40); // Shorter naps
+          state.isWalking = false;
+        } else if (roll < 0.65) {
+          nextBehavior = 'grooming';
+          state.behaviorTimer = 30 + Math.floor(Math.random() * 30);
+          state.isWalking = false;
+        } else if (roll < 0.75) {
+          nextBehavior = 'staring';
+          state.behaviorTimer = 20 + Math.floor(Math.random() * 20);
+          state.isWalking = false;
+        } else {
+          nextBehavior = 'chasing';
+          state.behaviorTimer = 35 + Math.floor(Math.random() * 40);
+          state.targetX = 15 + Math.random() * 60;
+          state.isWalking = true;
+          state.speed = 0.65 + Math.random() * 0.15; // Zooming chase!
+        }
+      } else if (pers === 'shy') {
+        // Shy: Restricts target coordinates near margins (15%-30% or 70%-85%)
+        // 35% wander, 25% nap, 20% grooming, 15% staring, 5% chasing
+        if (roll < 0.35) {
+          nextBehavior = 'wandering';
+          state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
+          state.targetX = Math.random() > 0.5 ? (15 + Math.random() * 15) : (70 + Math.random() * 15);
+          state.isWalking = true;
+          state.speed = 0.10 + Math.random() * 0.05;
+        } else if (roll < 0.60) {
+          nextBehavior = 'napping';
+          state.behaviorTimer = 80 + Math.floor(Math.random() * 80);
+          state.isWalking = false;
+        } else if (roll < 0.80) {
+          nextBehavior = 'grooming';
+          state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+          state.isWalking = false;
+        } else if (roll < 0.95) {
+          nextBehavior = 'staring';
+          state.behaviorTimer = 30 + Math.floor(Math.random() * 35);
+          state.isWalking = false;
+        } else {
+          nextBehavior = 'chasing';
+          state.behaviorTimer = 20 + Math.floor(Math.random() * 25);
+          state.targetX = Math.random() > 0.5 ? (15 + Math.random() * 15) : (70 + Math.random() * 15);
+          state.isWalking = true;
+          state.speed = 0.25 + Math.random() * 0.05;
+        }
       } else {
-        nextBehavior = 'chasing';
-        state.behaviorTimer = 25 + Math.floor(Math.random() * 30); // 2.5-5.5s
-        state.targetX = 15 + Math.random() * 60;
-        state.isWalking = true;
-        state.speed = 0.35 + Math.random() * 0.1; // Fast speed boost!
+        // Grumpy: 30% wander, 20% nap, 25% grooming, 20% staring, 5% chasing
+        if (roll < 0.30) {
+          nextBehavior = 'wandering';
+          state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
+          state.targetX = 15 + Math.random() * 60;
+          state.isWalking = true;
+          state.speed = 0.12 + Math.random() * 0.06;
+        } else if (roll < 0.50) {
+          nextBehavior = 'napping';
+          state.behaviorTimer = 60 + Math.floor(Math.random() * 80);
+          state.isWalking = false;
+        } else if (roll < 0.75) {
+          nextBehavior = 'grooming';
+          state.behaviorTimer = 50 + Math.floor(Math.random() * 50);
+          state.isWalking = false;
+        } else if (roll < 0.95) {
+          nextBehavior = 'staring';
+          state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+          state.isWalking = false;
+        } else {
+          nextBehavior = 'chasing';
+          state.behaviorTimer = 20 + Math.floor(Math.random() * 20);
+          state.targetX = 15 + Math.random() * 60;
+          state.isWalking = true;
+          state.speed = 0.30 + Math.random() * 0.08;
+        }
       }
 
       state.behavior = nextBehavior;
       
       // Update DOM classes for CSS animations
-      el.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""}`;
+      el.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${pers}`;
       
       // Re-render SVG to show correct eyes
-      const renderEyes = state.behavior === "napping" ? "sleeping" : k.eyes;
+      const renderEyes = state.behavior === "napping" ? "sleeping" : (k.eyes === "normal" && k.personality === "grumpy" ? "grumpy" : k.eyes);
       if (svgWrap) {
         svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat");
       }
 
       // 60% chance to say something about new behavior
       if (Math.random() < 0.6) {
-        const pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+        let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+        if (Math.random() < 0.5 && k.personality && PERSONALITY_SPEECHES[k.personality]) {
+          pool = PERSONALITY_SPEECHES[k.personality];
+        }
         const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
         showKittenSpeech(k.id, randomText);
       }
@@ -912,7 +1077,10 @@ setInterval(() => {
         
         // 20% chance to speak on arrival
         if (Math.random() < 0.2) {
-          const pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+          let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+          if (k.personality && PERSONALITY_SPEECHES[k.personality] && Math.random() < 0.5) {
+            pool = PERSONALITY_SPEECHES[k.personality];
+          }
           const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
           showKittenSpeech(k.id, randomText);
         }
@@ -929,13 +1097,96 @@ setInterval(() => {
       // Sitting still
       // 0.4% chance to meow/speak while sitting
       if (Math.random() < 0.004) {
-        const pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+        let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+        if (k.personality && PERSONALITY_SPEECHES[k.personality] && Math.random() < 0.6) {
+          pool = PERSONALITY_SPEECHES[k.personality];
+        }
         const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
         showKittenSpeech(k.id, randomText);
       }
     }
   });
 }, 100);
+
+// Playpen Laser Pointer Click Listener
+playpenViewport.addEventListener("click", (e) => {
+  // If clicked on any button, card, modal, or kitten itself, ignore it to prevent conflict
+  const target = e.target as HTMLElement;
+  if (target.closest(".playpen-kitten, .pet-stats-card, .balloon, .care-controls, button, input")) {
+    return;
+  }
+
+  // Get coordinate relative to playpen-viewport
+  const rect = playpenViewport.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+  const pctX = (clickX / rect.width) * 100;
+
+  // Create laser dot element
+  const laser = document.createElement("div");
+  laser.className = "laser-dot";
+  laser.style.left = `${clickX}px`;
+  laser.style.top = `${clickY}px`;
+  playpenViewport.appendChild(laser);
+
+  // Remove after animation finishes
+  setTimeout(() => {
+    laser.remove();
+  }, 1500);
+
+  // Alert all kittens in the playpen to chase the laser!
+  kittensList.forEach((k) => {
+    const state = playpenStates.get(k.id);
+    if (!state) return;
+
+    // Laser chase behavior:
+    state.behavior = 'chasing';
+    // Laser coordinate is the new targetX
+    state.targetX = Math.max(10, Math.min(90, pctX));
+    state.isWalking = true;
+    
+    // Set custom chase speed based on personality
+    const pers = k.personality || 'lazy';
+    if (pers === 'lazy') {
+      state.speed = 0.22 + Math.random() * 0.08;
+    } else if (pers === 'hyper') {
+      state.speed = 0.70 + Math.random() * 0.20;
+    } else if (pers === 'shy') {
+      state.speed = 0.35 + Math.random() * 0.10;
+    } else {
+      state.speed = 0.45 + Math.random() * 0.15;
+    }
+
+    // Set behavior timer to something longer so they chase and stay excited
+    state.behaviorTimer = 35 + Math.floor(Math.random() * 30); // 3.5 - 6.5s
+
+    // Update DOM class to apply running animations
+    const el = document.querySelector(`.playpen-kitten[data-id="${k.id}"]`) as HTMLDivElement;
+    if (el) {
+      el.className = `playpen-kitten chasing ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${pers}`;
+      
+      const svgWrap = el.querySelector(".kitten-svg-wrapper") as HTMLDivElement;
+      if (svgWrap) {
+        svgWrap.innerHTML = getKittenSvg(k.color, k.eyes, k.stage === "cat");
+      }
+    }
+
+    // Laser chase dialogue meows!
+    const chaseSpeech = [
+      "🔴 Red dot!",
+      "I see the dot! 🐾",
+      "Get the red dot! 💨",
+      "Pounce! 🔴",
+      "Chasing! Zoom!",
+      "Got it! No, wait...",
+    ];
+    // 80% chance to meow when laser is clicked
+    if (Math.random() < 0.8) {
+      const randomText = chaseSpeech[Math.floor(Math.random() * chaseSpeech.length)];
+      showKittenSpeech(k.id, randomText);
+    }
+  });
+});
 
 // Initial Load & Polling Ticker
 fetchInit();
