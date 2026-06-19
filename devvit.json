@@ -1,6 +1,6 @@
 {
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
-  "name": "catagotchi",
+  "name": "kittehgotchi",
   "post": {
     "dir": "public",
     "entrypoints": {
@@ -17,7 +17,7 @@
   "menu": {
     "items": [
       {
-        "label": "Create Catagotchi Post",
+        "label": "Create Kittehgotchi Post",
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/post-create"
@@ -30,5 +30,8 @@
   "permissions": {
     "reddit": true,
     "redis": true
+  },
+  "dev": {
+    "subreddit": "kittehgotchi_dev"
   }
 }

@@ -602,12 +602,12 @@ async function onMenuNewPost(): Promise<UiResponse> {
     throw new Error("subredditName is required to create a custom post");
   }
   const post = await reddit.submitCustomPost({
-    title: "Catagotchi Kitten Sanctuary",
+    title: "Kittehgotchi Kitten Sanctuary",
     subredditName: context.subredditName,
     entry: "default",
   });
   return {
-    showToast: { text: `Catagotchi Post ${post.id} created.`, appearance: "success" },
+    showToast: { text: `Kittehgotchi Post ${post.id} created.`, appearance: "success" },
     navigateTo: post.url,
   };
 }
@@ -617,7 +617,7 @@ async function onAppInstall(): Promise<TriggerResponse> {
     throw new Error("subredditName is required to create a custom post");
   }
   await reddit.submitCustomPost({
-    title: "Catagotchi Kitten Sanctuary",
+    title: "Kittehgotchi Kitten Sanctuary",
     subredditName: context.subredditName,
     entry: "default",
   });
