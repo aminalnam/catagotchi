@@ -24,6 +24,7 @@ export interface Kitten {
   originSubreddit: string;
   ownerUser: string;  // User who played for the first time and generated this kitten
   personality: KittenPersonality;
+  isSick?: boolean;
 }
 
 export type KittenPersonality =
@@ -338,9 +339,10 @@ export interface InitResponse {
   logs: GameLog[];
   profile: PlayerProfile;
   leaderboard: LeaderboardItem[];
+  litterbox?: number;
 }
 
-export type CareActionType = "feed" | "play" | "clean" | "pet";
+export type CareActionType = "feed" | "play" | "clean" | "pet" | "medicine" | "treat";
 
 export interface ActionRequest {
   kittenId: string;
@@ -355,6 +357,7 @@ export interface ActionResponse {
   logs: GameLog[];
   profile: PlayerProfile;
   leaderboard: LeaderboardItem[];
+  litterbox?: number;
 }
 
 export interface RenameRequest {

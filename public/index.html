@@ -45,20 +45,95 @@
         <div id="kitten-list" class="kitten-cards-container">
           <!-- Dynamically populated -->
         </div>
+        
+        <!-- Quick Stats Overlay (Selected Kitten) -->
+        <div class="pet-stats-card">
+          <div class="pet-details-col">
+            <div class="pet-header">
+              <h3 id="pet-name">Litter Empty</h3>
+              <span id="pet-stage-badge" class="badge">kitten</span>
+              <span id="pet-personality-badge" class="badge hidden" style="background: #a855f7; color: white; margin-left: 4px;">lazy</span>
+              <button id="btn-rename-trigger" class="btn-icon" title="Rename Kitten">✏️</button>
+            </div>
+            <p class="owner-tag">Adopted by: <span id="pet-owner">u/-</span></p>
+            <p id="pet-personality-desc" class="owner-tag hidden" style="font-style: italic; color: #a855f7; margin-top: 2px; font-size: 0.72rem;"></p>
+          </div>
+          
+          <div class="stat-progress-bars">
+            <div class="stat-row">
+              <span class="stat-label">🐟 Hunger</span>
+              <div class="progress-track">
+                <div id="bar-hunger" class="progress-fill fill-hunger" style="width: 0%"></div>
+              </div>
+              <span id="val-hunger" class="stat-percentage">0%</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">🧶 Happiness</span>
+              <div class="progress-track">
+                <div id="bar-happiness" class="progress-fill fill-happiness" style="width: 0%"></div>
+              </div>
+              <span id="val-happiness" class="stat-percentage">0%</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">🧼 Cleanliness</span>
+              <div class="progress-track">
+                <div id="bar-cleanliness" class="progress-fill fill-cleanliness" style="width: 0%"></div>
+              </div>
+              <span id="val-cleanliness" class="stat-percentage">0%</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Center Column: Virtual Pet Playpen -->
       <section class="playpen-section">
         <div class="playpen-viewport">
           
-          <!-- Background Decoration -->
+          <!-- Layered Background Scene -->
           <div class="viewport-backdrop">
-            <div class="window">
-              <div class="sun"></div>
-              <div class="cloud"></div>
+            <!-- Sky/Window View -->
+            <div class="sanctuary-window">
+              <div class="parallax-sky">
+                <div class="sky-sun"></div>
+                <div class="sky-cloud cloud-1"></div>
+                <div class="sky-cloud cloud-2"></div>
+                <div class="sky-stars hidden"></div>
+              </div>
+              <div class="window-frame"></div>
             </div>
-            <div class="toy-shelf">🧸 Yarn</div>
-            <div class="scratching-post">💈</div>
+            
+            <!-- Room structure layers -->
+            <div class="room-wall-strip"></div>
+            <div class="cozy-carpet">
+              <div id="floor-poops-container"></div>
+            </div>
+            <div class="hanging-plant">🌿</div>
+          </div>
+
+          <!-- Interactive Scene Objects -->
+          <div class="scene-interactive-layer">
+            <div id="scene-cat-tree" class="scene-item" title="Cat Tree">
+              <div class="tree-platform platform-top">🪵</div>
+              <div class="tree-platform platform-mid">🪵</div>
+              <div class="tree-trunk">💈</div>
+              <div class="tree-label">Cat Tree</div>
+            </div>
+            <div id="scene-food-bowl" class="scene-item bowl-empty" title="Food Bowl">
+              <div class="bowl-food">🐟</div>
+              <div class="bowl-label">Food Bowl</div>
+            </div>
+            <div id="scene-scratching-post" class="scene-item" title="Scratching Post">
+              <div class="post-rope">💈</div>
+              <div class="post-label">Scratch Post</div>
+            </div>
+            <div id="scene-yarn-ball" class="scene-item" title="Yarn Ball">
+              <div class="yarn-thread">🧶</div>
+              <div class="yarn-label">Yarn Toy</div>
+            </div>
+            <div id="scene-cat-bed" class="scene-item" title="Cozy Bed">
+              <div class="bed-pillow">🛏️</div>
+              <div class="bed-label">Cat Bed</div>
+            </div>
           </div>
 
           <!-- Pet Display Area -->
@@ -80,41 +155,7 @@
             <span class="balloon-text">Feed me! 😿</span>
           </div>
 
-          <!-- Quick Stats Overlay (Selected Kitten) -->
-          <div class="pet-stats-card">
-            <div class="pet-header">
-              <h3 id="pet-name">Litter Empty</h3>
-              <span id="pet-stage-badge" class="badge">kitten</span>
-              <span id="pet-personality-badge" class="badge hidden" style="background: #a855f7; color: white; margin-left: 4px;">lazy</span>
-              <button id="btn-rename-trigger" class="btn-icon" title="Rename Kitten">✏️</button>
-            </div>
-            <p class="owner-tag">Adopted by: <span id="pet-owner">u/-</span></p>
-            <p id="pet-personality-desc" class="owner-tag hidden" style="font-style: italic; color: #a855f7; margin-top: 2px; font-size: 0.72rem;"></p>
-            
-            <div class="stat-progress-bars">
-              <div class="stat-row">
-                <span class="stat-label">🐟 Hunger</span>
-                <div class="progress-track">
-                  <div id="bar-hunger" class="progress-fill fill-hunger" style="width: 0%"></div>
-                </div>
-                <span id="val-hunger" class="stat-percentage">0%</span>
-              </div>
-              <div class="stat-row">
-                <span class="stat-label">🧶 Happiness</span>
-                <div class="progress-track">
-                  <div id="bar-happiness" class="progress-fill fill-happiness" style="width: 0%"></div>
-                </div>
-                <span id="val-happiness" class="stat-percentage">0%</span>
-              </div>
-              <div class="stat-row">
-                <span class="stat-label">🧼 Cleanliness</span>
-                <div class="progress-track">
-                  <div id="bar-cleanliness" class="progress-fill fill-cleanliness" style="width: 0%"></div>
-                </div>
-                <span id="val-cleanliness" class="stat-percentage">0%</span>
-              </div>
-            </div>
-          </div>
+
 
         </div>
 
@@ -128,13 +169,17 @@
             <span class="btn-icon-large">🧶</span>
             <span class="btn-text">Play Yarn</span>
           </button>
-          <button id="btn-clean" class="btn-care btn-clean">
-            <span class="btn-icon-large">🧼</span>
-            <span class="btn-text">Give Bath</span>
-          </button>
           <button id="btn-pet" class="btn-care btn-pet">
             <span class="btn-icon-large">❤️</span>
             <span class="btn-text">Pet Kitten</span>
+          </button>
+          <button id="btn-treat" class="btn-care btn-treat">
+            <span class="btn-icon-large">🍪</span>
+            <span class="btn-text">Give Treat</span>
+          </button>
+          <button id="btn-clean" class="btn-care btn-clean">
+            <span class="btn-icon-large">🧼</span>
+            <span class="btn-text">Clean Litter</span>
           </button>
         </div>
 
@@ -185,6 +230,23 @@
       </div>
     </div>
 
+    <!-- Modal for Litterbox Mini-Game -->
+    <div id="litterbox-modal" class="modal hidden">
+      <div class="modal-content litterbox-content">
+        <h3>Scoop the Litterbox! 💩</h3>
+        <p>Click on all of the poop to clean the litterbox and make the room fresh:</p>
+        <div id="litterbox-area" class="litterbox-tray">
+          <!-- Poops injected dynamically -->
+        </div>
+        <div class="litterbox-status-bar">
+          Poops remaining: <span id="litterbox-count" class="poop-count-label">0</span>
+        </div>
+        <div class="modal-actions">
+          <button id="btn-litterbox-cancel" class="btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Admin Time Warp HUD (Visible to Mods) -->
     <footer id="admin-controls" class="admin-hud hidden">
       <span class="admin-label">🛡️ Moderator Controls:</span>
@@ -193,6 +255,8 @@
       <button id="btn-warp-72" class="btn-admin">⏰ Warp +72h</button>
       <span class="admin-help">(Simulates stat decay and growth)</span>
     </footer>
+
+
 
   </div>
 

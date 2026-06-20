@@ -15,12 +15,226 @@ import {
   PERSONALITY_MAP,
 } from "../shared/api.ts";
 
+// Client-side Offline Mock Mode Interceptor
+if (window.location.search.includes("mock=true") || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+  const originalFetch = window.fetch;
+  
+  const mockState = {
+    username: "Player123",
+    subredditName: "kittehgotchi_dev",
+    isModerator: true,
+    kittens: [
+      {
+        id: "mock_k1",
+        name: "Smudge",
+        stage: "kitten" as const,
+        color: "#ffffff",
+        eyes: "normal",
+        bornAt: Date.now() - 3600000,
+        hunger: 80,
+        happiness: 80,
+        cleanliness: 80,
+        neglectedSince: null,
+        originSubreddit: "kittehgotchi_dev",
+        ownerUser: "Player123",
+        personality: "smudge" as const,
+        isSick: false
+      },
+      {
+        id: "mock_k2",
+        name: "Zen",
+        stage: "kitten" as const,
+        color: "#cbd5e1",
+        eyes: "sleeping",
+        bornAt: Date.now() - 7200000,
+        hunger: 90,
+        happiness: 90,
+        cleanliness: 40,
+        neglectedSince: null,
+        originSubreddit: "kittehgotchi_dev",
+        ownerUser: "Player123",
+        personality: "shironeko" as const,
+        isSick: false
+      }
+    ] as Kitten[],
+    cats: [] as Kitten[],
+    logs: [
+      { id: "log_1", text: "Welcome to Kittehgotchi Sanctuary! 🐱", timestamp: Date.now() }
+    ] as GameLog[],
+    profile: {
+      username: "Player123",
+      actionsPerformed: 5,
+      hasPlayedBefore: true
+    } as PlayerProfile,
+    leaderboard: [
+      { username: "Player123", score: 5 },
+      { username: "ModKitty", score: 42 }
+    ],
+    litterbox: 2
+  };
+
+  window.fetch = async function (input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const url = typeof input === "string" ? input : (input instanceof URL ? input.toString() : (input as Request).url);
+    console.log("[MOCK FETCH]", url, init);
+    
+    if (url.includes("/api/init")) {
+      const resp: InitResponse = {
+        type: "init",
+        postId: "mock_post",
+        username: mockState.username,
+        subredditName: mockState.subredditName,
+        isModerator: mockState.isModerator,
+        kittens: mockState.kittens,
+        cats: mockState.cats,
+        logs: mockState.logs,
+        profile: mockState.profile,
+        leaderboard: mockState.leaderboard,
+        litterbox: mockState.litterbox
+      };
+      return new Response(JSON.stringify(resp), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    
+    if (url.includes("/api/spawn-stray")) {
+      const names = ["Socks", "Luna", "Crookshanks", "Marie", "Jiji", "Jonesy", "Tigger", "Mochi", "Oliver", "Bella", "Simba"];
+      const colors = ["#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#8b5cf6", "#ef4444", "#a855f7", "#ffffff", "#cbd5e1"];
+      const personalities: KittenPersonality[] = ["smudge", "venus", "colonel_meow", "nala", "shironeko"];
+      
+      const newKitten: Kitten = {
+        id: "mock_stray_" + Math.random().toString(36).substr(2, 9),
+        name: names[Math.floor(Math.random() * names.length)],
+        stage: "kitten",
+        color: colors[Math.floor(Math.random() * colors.length)],
+        eyes: "normal",
+        bornAt: Date.now(),
+        hunger: 100,
+        happiness: 100,
+        cleanliness: 100,
+        neglectedSince: null,
+        originSubreddit: mockState.subredditName,
+        ownerUser: mockState.username,
+        personality: personalities[Math.floor(Math.random() * personalities.length)] as KittenPersonality,
+        isSick: false
+      };
+      mockState.kittens.push(newKitten);
+      mockState.logs.unshift({ id: "log_" + Date.now(), text: `A new stray kitten named ${newKitten.name} wandered in!`, timestamp: Date.now() });
+      
+      const resp = {
+        kittens: mockState.kittens,
+        cats: mockState.cats,
+        litterbox: mockState.litterbox,
+        logs: mockState.logs
+      };
+      return new Response(JSON.stringify(resp), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    
+    if (url.includes("/api/action")) {
+      const body = JSON.parse(init?.body as string || "{}") as ActionRequest;
+      const kId = body.kittenId;
+      const action = body.action;
+      
+      mockState.profile.actionsPerformed++;
+      mockState.leaderboard[0].score = mockState.profile.actionsPerformed;
+      
+      if (kId === "global" && action === "clean") {
+        mockState.litterbox = 0;
+        mockState.logs.unshift({ id: "log_" + Date.now(), text: `u/${mockState.username} cleaned the litterbox! 🧼`, timestamp: Date.now() });
+      } else {
+        const kit = mockState.kittens.find(x => x.id === kId) || mockState.cats.find(x => x.id === kId);
+        if (kit) {
+          if (action === "feed") {
+            kit.hunger = Math.min(100, kit.hunger + 30);
+            mockState.logs.unshift({ id: "log_" + Date.now(), text: `Fed ${kit.name} some fish! 🐟`, timestamp: Date.now() });
+          } else if (action === "play") {
+            kit.happiness = Math.min(100, kit.happiness + 25);
+            mockState.logs.unshift({ id: "log_" + Date.now(), text: `Played with ${kit.name}! 🧶`, timestamp: Date.now() });
+          } else if (action === "treat") {
+            kit.happiness = Math.min(100, kit.happiness + 40);
+            kit.hunger = Math.min(100, kit.hunger + 10);
+            mockState.logs.unshift({ id: "log_" + Date.now(), text: `Gave ${kit.name} a treat! 🍪`, timestamp: Date.now() });
+          } else if (action === "medicine") {
+            kit.isSick = false;
+            mockState.logs.unshift({ id: "log_" + Date.now(), text: `Gave ${kit.name} medicine! 💊`, timestamp: Date.now() });
+          }
+        }
+      }
+      
+      const resp: ActionResponse = {
+        success: true,
+        message: "Action mock success",
+        kittens: mockState.kittens,
+        cats: mockState.cats,
+        logs: mockState.logs,
+        profile: mockState.profile,
+        leaderboard: mockState.leaderboard,
+        litterbox: mockState.litterbox
+      };
+      return new Response(JSON.stringify(resp), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    
+    if (url.includes("/api/rename")) {
+      const body = JSON.parse(init?.body as string || "{}") as RenameRequest;
+      const kit = mockState.kittens.find(x => x.id === body.kittenId) || mockState.cats.find(x => x.id === body.kittenId);
+      if (kit) {
+        const oldName = kit.name;
+        kit.name = body.newName;
+        mockState.logs.unshift({ id: "log_" + Date.now(), text: `Renamed ${oldName} to ${kit.name}! ✏️`, timestamp: Date.now() });
+      }
+      const resp: RenameResponse = {
+        success: true,
+        message: "Rename mock success",
+        kittens: mockState.kittens
+      };
+      return new Response(JSON.stringify(resp), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    
+    if (url.includes("/api/time-warp")) {
+      const body = JSON.parse(init?.body as string || "{}") as TimeWarpRequest;
+      const hours = body.hours;
+      
+      mockState.kittens.forEach(k => {
+        k.hunger = Math.max(0, k.hunger - hours * 5);
+        k.happiness = Math.max(0, k.happiness - hours * 4);
+        k.cleanliness = Math.max(0, k.cleanliness - hours * 6);
+        if (k.cleanliness < 35 && Math.random() < 0.35) {
+          k.isSick = true;
+        }
+        // Grow to cat if 72 hours warp
+        if (hours >= 72 && k.stage === "kitten") {
+          k.stage = "cat";
+          mockState.logs.unshift({ id: "log_" + Date.now(), text: `🎉 ${k.name} grew up into a mature cat!`, timestamp: Date.now() });
+        }
+      });
+      
+      mockState.litterbox = Math.min(10, mockState.litterbox + Math.floor(hours * 0.5));
+      mockState.logs.unshift({ id: "log_" + Date.now(), text: `🛡️ Time warped by +${hours}h!`, timestamp: Date.now() });
+      
+      const resp: TimeWarpResponse = {
+        success: true,
+        message: "Time warp mock success",
+        kittens: mockState.kittens,
+        cats: mockState.cats,
+        logs: mockState.logs
+      };
+      return new Response(JSON.stringify(resp), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+
+    return originalFetch(input, init);
+  };
+}
+
 // State
 let kittensList: Kitten[] = [];
 let catsList: Kitten[] = [];
 let selectedKitten: Kitten | null = null;
 let currentUsername = "";
 let isModerator = false;
+let roomLitterbox = 0;
+
+// Mini-games State
+let isMedicineChaseActive = false;
+let medicineClicks = 0;
+let chasedKittenId = "";
+let mouseXPercent = 50;
 
 // DOM Elements
 const hudSubreddit = document.getElementById("hud-subreddit") as HTMLSpanElement;
@@ -57,6 +271,7 @@ const btnFeed = document.getElementById("btn-feed") as HTMLButtonElement;
 const btnPlay = document.getElementById("btn-play") as HTMLButtonElement;
 const btnClean = document.getElementById("btn-clean") as HTMLButtonElement;
 const btnPet = document.getElementById("btn-pet") as HTMLButtonElement;
+const btnTreat = document.getElementById("btn-treat") as HTMLButtonElement;
 
 // Rename Modal Elements
 const renameModal = document.getElementById("rename-modal") as HTMLDivElement;
@@ -72,156 +287,254 @@ const btnWarp12 = document.getElementById("btn-warp-12") as HTMLButtonElement;
 const btnWarp72 = document.getElementById("btn-warp-72") as HTMLButtonElement;
 
 // Generate SVG Code for Kitten/Cat
-function getKittenSvg(color: string, eyesType: string, isCat: boolean, headOnly: boolean = false): string {
-  let eyesSvg = "";
-  switch (eyesType) {
-    case "happy":
-      eyesSvg = `
-        <path d="M 25 48 Q 34 37 43 48" stroke="#000" stroke-width="5.5" stroke-linecap="round" fill="none"/>
-        <path d="M 57 48 Q 66 37 75 48" stroke="#000" stroke-width="5.5" stroke-linecap="round" fill="none"/>
-      `;
-      break;
-    case "sad":
-      eyesSvg = `
-        <circle cx="34" cy="46" r="9" fill="#fff" stroke="#000" stroke-width="5"/>
-        <circle cx="66" cy="46" r="9" fill="#fff" stroke="#000" stroke-width="5"/>
-        <path d="M 23 37 L 33 42" stroke="#000" stroke-width="4.5" stroke-linecap="round"/>
-        <path d="M 77 37 L 67 42" stroke="#000" stroke-width="4.5" stroke-linecap="round"/>
-      `;
-      break;
-    case "grumpy":
-      eyesSvg = `
-        <circle cx="34" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="5"/>
-        <circle cx="66" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="5"/>
-        <path d="M 21 34 L 43 41" stroke="#000" stroke-width="5.5" stroke-linecap="round"/>
-        <path d="M 79 34 L 57 41" stroke="#000" stroke-width="5.5" stroke-linecap="round"/>
-      `;
-      break;
-    case "sleeping":
-      eyesSvg = `
-        <path d="M 24 46 H 44" stroke="#000" stroke-width="6" stroke-linecap="round"/>
-        <path d="M 56 46 H 76" stroke="#000" stroke-width="6" stroke-linecap="round"/>
-      `;
-      break;
-    case "normal":
-    default:
-      eyesSvg = `
-        <circle cx="34" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="5"/>
-        <circle cx="66" cy="46" r="9.5" fill="#fff" stroke="#000" stroke-width="5"/>
-      `;
-      break;
+const PIXEL_ART_FRAMES = {
+  stand: [
+    "................",
+    "................",
+    "..k........k....",
+    ".kpk......kpk...",
+    ".kkkkkkkkkkkk...",
+    "kksskssksskkkk..",
+    "kksskksskkkkkk.t",
+    "kkeekkeekkkkkk.t",
+    "kkkkkppkkkkkkktt",
+    ".kkkcccckkkkkkt.",
+    "..kwwwwwwkkkttt.",
+    "..kwwwwwwkkkt...",
+    "..kkkkkkkkkk....",
+    "..kkkkkkkkkk....",
+    "..kk....kk......",
+    "..ss....ss......"
+  ],
+  walk1: [
+    "................",
+    "................",
+    "..k........k....",
+    ".kpk......kpk...",
+    ".kkkkkkkkkkkk...",
+    "kksskssksskkkk..",
+    "kksskksskkkkkk.t",
+    "kkeekkeekkkkkk.t",
+    "kkkkkppkkkkkkktt",
+    ".kkkcccckkkkkkt.",
+    "..kwwwwwwkkkttt.",
+    "..kwwwwwwkkkt...",
+    "..kkkkkkkkkk....",
+    "..kkkkkkkkkk....",
+    "..kk............",
+    "..ss....kk......"
+  ],
+  walk2: [
+    "................",
+    "................",
+    "..k........k....",
+    ".kpk......kpk...",
+    ".kkkkkkkkkkkk...",
+    "kksskssksskkkk..",
+    "kksskksskkkkkk.t",
+    "kkeekkeekkkkkk.t",
+    "kkkkkppkkkkkkktt",
+    ".kkkcccckkkkkkt.",
+    "..kwwwwwwkkkttt.",
+    "..kwwwwwwkkkt...",
+    "..kkkkkkkkkk....",
+    "..kkkkkkkkkk....",
+    "........kk......",
+    "..kk....ss......"
+  ],
+  sleep: [
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "..k.....k.......",
+    ".kpk...kpk......",
+    ".kkkkkkkkk....tt",
+    "kkssksskkk...tkk",
+    "kkeekkeekkk.tkkk",
+    "kkkppkkkkkktkkkk",
+    ".kkcccckkkktkkkk",
+    ".kkwwwwkkk..tkk.",
+    ".kkkkkkkkk...tt.",
+    "..kkkkkkk.......",
+    "...sssss........"
+  ],
+  eat: [
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "..k.....k.......",
+    ".kpk...kpk....t.",
+    ".kkkkkkkkk....t.",
+    "kkssksskkk...tt.",
+    "kkeekkeekk...t..",
+    "kkkppkkkkk..tt..",
+    ".kkcccckkkkk....",
+    ".kkwwwwkkkkk....",
+    ".kkkkkkkkkkk....",
+    "..kk...kk.......",
+    "..ss...ss......."
+  ],
+  scratch: [
+    "..k.....k.......",
+    ".kpk...kpk......",
+    ".kkkkkkkkk......",
+    "kkssksskkk......",
+    "kkeekkeekk......",
+    "kkkppkkkkk......",
+    ".kkcccckk.......",
+    ".kkwwwwkk.......",
+    "..kkkkkk........",
+    ".kkkkkkkk.......",
+    ".kk....kk.......",
+    ".kk....kk.......",
+    ".kkkkkkkk.......",
+    ".kkkkkkkk...tt..",
+    ".kk....kk..tkkt.",
+    ".ss....ss...tt.."
+  ],
+  play: [
+    "............t...",
+    "...........tt...",
+    "..k.....k...t...",
+    ".kpk...kpk.tt...",
+    ".kkkkkkkkk.t....",
+    "kkssksskkktt....",
+    "kkeekkeekkt.....",
+    "kkkppkkkkkt.....",
+    ".kkcccckkkt.....",
+    "..kwwwwkkkt.....",
+    "..kkkkkkkk......",
+    ".kkkkkkkkkk.....",
+    "kk........kk....",
+    "kk........kk....",
+    "................",
+    "................"
+  ]
+};
+
+const HEAD_GRID = [
+  "................",
+  "................",
+  "..k........k....",
+  ".kpk......kpk...",
+  ".kkkkkkkkkkkk...",
+  "kksskssksskkkk..",
+  "kksskksskkkkkk..",
+  "kkeekkeekkkkkk..",
+  "kkkkkppkkkkkkk..",
+  "................",
+  "................",
+  "................",
+  "................",
+  "................",
+  "................",
+  "................"
+];
+
+function darkenColor(hex: string, percent: number): string {
+  let num = parseInt(hex.replace("#", ""), 16),
+    amt = Math.round(2.55 * percent),
+    R = (num >> 16) - amt,
+    G = (num >> 8 & 0x00FF) - amt,
+    B = (num & 0x0000FF) - amt;
+  return "#" + (0x1000000 + (R < 0 ? 0 : R > 255 ? 255 : R) * 0x10000 + (G < 0 ? 0 : G > 255 ? 255 : G) * 0x100 + (B < 0 ? 0 : B > 255 ? 255 : B)).toString(16).slice(1);
+}
+
+function getKittenSvg(
+  color: string,
+  eyesType: string,
+  isCat: boolean,
+  headOnly: boolean = false,
+  viewDirection: 'front' | 'back' | 'side' = 'front',
+  behavior: string = "stand",
+  isWalking: boolean = false
+): string {
+  // Always force front view for cute retro pixel art (Desktop Purrfect style)
+  viewDirection = 'front';
+
+  // Determine active frame
+  let frameName: keyof typeof PIXEL_ART_FRAMES = 'stand';
+  if (isWalking) {
+    const walkStep = Math.floor(Date.now() / 200) % 2;
+    frameName = walkStep === 0 ? 'walk1' : 'walk2';
+  } else {
+    switch (behavior) {
+      case 'napping':
+      case 'bathing':
+        frameName = 'sleep';
+        break;
+      case 'eating':
+        frameName = 'eat';
+        break;
+      case 'scratching':
+        frameName = 'scratch';
+        break;
+      case 'playing':
+        frameName = 'play';
+        break;
+      default:
+        frameName = 'stand';
+        break;
+    }
   }
 
-  const scale = isCat ? "scale(1.18)" : "scale(1)";
-  const translate = isCat ? "translate(-8, -13)" : "translate(0, 0)";
+  const grid = headOnly ? HEAD_GRID : PIXEL_ART_FRAMES[frameName];
+  const shadowColor = darkenColor(color, 25);
   
-  if (headOnly) {
-    return `
-      <svg viewBox="10 10 80 80" class="svg-kitten">
-        <!-- Head Silhouette -->
-        <path d="M 36 24 L 12 15 Q 15 28, 22 38 L 15 41 L 23 45 L 16 49 L 24 53 Q 50 70, 76 53 L 84 49 L 77 45 L 85 41 L 78 38 Q 85 28, 88 15 L 64 24 L 59 23 L 57 16 L 51 22 L 48 17 L 43 23 L 40 18 Z" fill="${color}" stroke="#000" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-        
-        <!-- Inner Ears -->
-        <path d="M 32 23 L 16 18 Q 18 26, 22 32 Z" fill="#FF8A5B"/>
-        <path d="M 68 23 L 84 18 Q 82 26, 78 32 Z" fill="#FF8A5B"/>
-        
-        <!-- Forehead Tufts -->
-        <path d="M 43 31 Q 46.5 27 50 31 Q 53.5 27 57 31" stroke="rgba(0,0,0,0.25)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
-        
-        <!-- Whiskers -->
-        <line x1="26" y1="50" x2="31" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="25" y1="53" x2="30" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="26" y1="56" x2="31" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="74" y1="50" x2="69" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="75" y1="53" x2="70" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="74" y1="56" x2="69" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        
-        <!-- Tongue Blep -->
-        <path d="M 47 56 C 47 65, 53 65, 53 56 Z" fill="#ff4d79" stroke="#000" stroke-width="4.5"/>
-        <line x1="50" y1="56" x2="50" y2="61" stroke="#000" stroke-width="3" stroke-linecap="round"/>
-        
-        <!-- Mouth -->
-        <path d="M 42 55 Q 46 60 50 55 Q 54 60 58 55" stroke="#000" stroke-width="4.5" stroke-linecap="round" fill="none"/>
-        
-        <!-- Nose -->
-        <ellipse cx="50" cy="53" rx="5" ry="3.5" fill="#ff7da0" stroke="#000" stroke-width="4"/>
-        
-        <!-- Eyes -->
-        <g class="kitten-eyes">
-          ${eyesSvg}
-        </g>
-        
-        <!-- Collar -->
-        ${isCat ? `
-          <path d="M 33 60 Q 50 65 67 60" stroke="#f43f5e" stroke-width="5.5" stroke-linecap="round" fill="none"/>
-          <circle cx="50" cy="64" r="5" fill="#fbbf24" stroke="#000" stroke-width="2"/>
-        ` : ""}
-      </svg>
-    `;
+  // Build SVG rect elements
+  let rects = "";
+  for (let r = 0; r < 16; r++) {
+    const rowStr = grid[r];
+    for (let c_idx = 0; c_idx < 16; c_idx++) {
+      const char = rowStr[c_idx];
+      if (char === ".") continue; // Transparent
+
+      let pixelColor = color;
+      if (char === "k") {
+        pixelColor = color;
+      } else if (char === "s") {
+        pixelColor = shadowColor;
+      } else if (char === "p") {
+        pixelColor = "#ffb4b4"; // Pink inner ears/nose
+      } else if (char === "w") {
+        pixelColor = "#ffffff"; // White belly/accents
+      } else if (char === "e") {
+        // Render eyes based on eyesType
+        if (eyesType === "sleeping" || eyesType === "happy") {
+          pixelColor = shadowColor; 
+        } else {
+          pixelColor = "#1a202c"; // Dark eye block
+        }
+      } else if (char === "c") {
+        pixelColor = isCat ? "#f43f5e" : color; // Red collar for cat, main color for kitten
+      } else if (char === "b") {
+        pixelColor = isCat ? "#fbbf24" : color; // Gold bell for cat
+      } else if (char === "t") {
+        pixelColor = color; // Tail
+      }
+
+      rects += `<rect x="${c_idx}" y="${r}" width="1" height="1" fill="${pixelColor}" />`;
+    }
   }
+
+  // Set viewBox: zoom in on the head for headOnly icons to fill the circular sidebar circles nicely
+  const viewBox = headOnly ? "0 2 15 7" : "0 0 16 16";
+  const scale = headOnly ? "scale(1)" : (isCat ? "scale(1.15)" : "scale(0.85)");
+  const translate = "translate(0, 0)";
 
   return `
-    <svg viewBox="0 0 100 100" class="svg-kitten" style="transform: ${translate} ${scale};">
-      <!-- Tail -->
-      <g class="kitten-tail">
-        <path d="M 68 82 C 78 82, 85 75, 82 60 C 80 50, 88 45, 85 35" fill="none" stroke="#000" stroke-width="8" stroke-linecap="round"/>
-        <path d="M 68 82 C 78 82, 85 75, 82 60 C 80 50, 88 45, 85 35" fill="none" stroke="${color}" stroke-width="4.5" stroke-linecap="round"/>
-      </g>
-      
-      <!-- Body -->
-      <path d="M 33 60 C 25 70, 20 85, 30 88 C 40 90, 60 90, 70 88 C 80 85, 75 70, 67 60 Z" fill="${color}" stroke="#000" stroke-width="5" stroke-linejoin="round"/>
-      <ellipse cx="50" cy="74" rx="15" ry="9" fill="rgba(255,255,255,0.2)"/>
-      
-      <!-- Paws -->
-      <ellipse cx="40" cy="88" rx="8" ry="5" fill="${color}" stroke="#000" stroke-width="4.5"/>
-      <ellipse cx="60" cy="88" rx="8" ry="5" fill="${color}" stroke="#000" stroke-width="4.5"/>
-      
-      <!-- Head Assembly (wrapped in group for head tilt/lick animations) -->
-      <g class="kitten-head-group">
-        <!-- Head Silhouette (combines base, ears, cheek spikes, and top tufts to avoid inner outlines) -->
-        <path d="M 36 24 L 12 15 Q 15 28, 22 38 L 15 41 L 23 45 L 16 49 L 24 53 Q 50 70, 76 53 L 84 49 L 77 45 L 85 41 L 78 38 Q 85 28, 88 15 L 64 24 L 59 23 L 57 16 L 51 22 L 48 17 L 43 23 L 40 18 Z" fill="${color}" stroke="#000" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
-        
-        <!-- Inner Ears -->
-        <path d="M 32 23 L 16 18 Q 18 26, 22 32 Z" fill="#FF8A5B"/>
-        <path d="M 68 23 L 84 18 Q 82 26, 78 32 Z" fill="#FF8A5B"/>
-        
-        <!-- Forehead Tufts (double-arch forehead marking) -->
-        <path d="M 43 31 Q 46.5 27 50 31 Q 53.5 27 57 31" stroke="rgba(0,0,0,0.25)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
-        
-        <!-- Cheek whisker markings -->
-        <!-- Left Cheek -->
-        <line x1="26" y1="50" x2="31" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="25" y1="53" x2="30" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="26" y1="56" x2="31" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <!-- Right Cheek -->
-        <line x1="74" y1="50" x2="69" y2="51" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="75" y1="53" x2="70" y2="54" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="74" y1="56" x2="69" y2="56" stroke="rgba(0,0,0,0.2)" stroke-width="2.5" stroke-linecap="round"/>
-        
-        <!-- Tongue Blep (draw behind mouth lines for neat outline intersection) -->
-        <path d="M 47 56 C 47 65, 53 65, 53 56 Z" fill="#ff4d79" stroke="#000" stroke-width="4.5"/>
-        <line x1="50" y1="56" x2="50" y2="61" stroke="#000" stroke-width="3" stroke-linecap="round"/>
-        
-        <!-- Mouth curves -->
-        <path d="M 42 55 Q 46 60 50 55 Q 54 60 58 55" stroke="#000" stroke-width="4.5" stroke-linecap="round" fill="none"/>
-        
-        <!-- Nose -->
-        <ellipse cx="50" cy="53" rx="5" ry="3.5" fill="#ff7da0" stroke="#000" stroke-width="4"/>
-        
-        <!-- Eyes -->
-        <g class="kitten-eyes">
-          ${eyesSvg}
-        </g>
-        
-        <!-- Collar for Mature Cats -->
-        ${isCat ? `
-          <path d="M 33 60 Q 50 65 67 60" stroke="#f43f5e" stroke-width="5.5" stroke-linecap="round" fill="none"/>
-          <circle cx="50" cy="64" r="5" fill="#fbbf24" stroke="#000" stroke-width="2"/>
-        ` : ""}
+    <svg viewBox="${viewBox}" width="100%" height="100%" class="svg-kitten" shape-rendering="crispEdges">
+      <g style="transform-origin: 8px 8px; transform: ${translate} ${scale};">
+        ${rects}
       </g>
     </svg>
   `;
 }
+
 
 // Particle Helper
 function triggerParticles(emoji: string) {
@@ -256,6 +569,8 @@ function updateActivePetDisplay() {
     }
   });
 
+  updateFloorPoops(roomLitterbox);
+
   if (!selectedKitten) {
     petName.textContent = "Adopt a Kitten!";
     petStageBadge.classList.add("hidden");
@@ -275,8 +590,9 @@ function updateActivePetDisplay() {
     // Disable controls
     btnFeed.disabled = true;
     btnPlay.disabled = true;
-    btnClean.disabled = true;
+    btnClean.disabled = isMedicineChaseActive;
     btnPet.disabled = true;
+    btnTreat.disabled = true;
     btnRenameTrigger.classList.add("hidden");
     return;
   }
@@ -339,7 +655,10 @@ function updateActivePetDisplay() {
   valCleanliness.textContent = `${c}%`;
 
   // Status Balloon
-  if (selectedKitten.neglectedSince !== null) {
+  if (selectedKitten.isSick) {
+    statusBalloon.querySelector(".balloon-text")!.textContent = "Sick! 🤒 Needs medicine!";
+    statusBalloon.classList.remove("hidden");
+  } else if (selectedKitten.neglectedSince !== null) {
     statusBalloon.querySelector(".balloon-text")!.textContent = "Neglected! 😿 Help!";
     statusBalloon.classList.remove("hidden");
   } else if (h < 30) {
@@ -356,11 +675,40 @@ function updateActivePetDisplay() {
   }
 
   // Care actions enablement (Cats don't need care decay or actions)
-  const isCareDisabled = isCat;
+  const isCareDisabled = isCat || isMedicineChaseActive;
   btnFeed.disabled = isCareDisabled;
   btnPlay.disabled = isCareDisabled;
-  btnClean.disabled = isCareDisabled;
-  btnPet.disabled = isCareDisabled;
+  btnTreat.disabled = isCareDisabled;
+  btnClean.disabled = isMedicineChaseActive;
+  
+  if (selectedKitten.isSick) {
+    btnPet.disabled = isMedicineChaseActive;
+    btnPet.querySelector(".btn-icon-large")!.textContent = "💊";
+    btnPet.querySelector(".btn-text")!.textContent = "Give Medicine";
+    btnPet.classList.add("btn-medicine");
+  } else {
+    btnPet.disabled = isCareDisabled;
+    btnPet.querySelector(".btn-icon-large")!.textContent = "❤️";
+    btnPet.querySelector(".btn-text")!.textContent = "Pet Kitten";
+    btnPet.classList.remove("btn-medicine");
+  }
+}
+
+function updateFloorPoops(level: number) {
+  const container = document.getElementById("floor-poops-container");
+  if (!container) return;
+  container.innerHTML = "";
+  
+  const count = Math.floor(level / 20);
+  const positions = [15, 35, 55, 75, 90];
+  for (let i = 0; i < count; i++) {
+    const poop = document.createElement("div");
+    poop.className = "floor-poop";
+    poop.textContent = "💩";
+    const leftOffset = positions[i] || (10 + Math.random() * 80);
+    poop.style.left = `${leftOffset}%`;
+    container.appendChild(poop);
+  }
 }
 
 // Render Lists
@@ -504,6 +852,7 @@ async function fetchInit() {
     isModerator = data.isModerator;
     kittensList = data.kittens;
     catsList = data.cats;
+    roomLitterbox = data.litterbox || 0;
 
     // HUD
     hudSubreddit.textContent = `r/${data.subredditName}`;
@@ -542,24 +891,103 @@ async function fetchInit() {
 
 // Perform Care Action
 async function performCareAction(actionType: CareActionType) {
+  // Intercept mini-games
+  if (actionType === "clean") {
+    startLitterboxGame();
+    return;
+  }
+  
   if (!selectedKitten) return;
   
-  // Visual Trigger on selected playpen element
-  const selectedWrap = document.querySelector(`.playpen-kitten[data-id="${selectedKitten.id}"] .kitten-svg-wrapper`);
-  if (selectedWrap) {
-    selectedWrap.classList.add(`anim-${actionType}`);
+  if (actionType === "pet" && selectedKitten.isSick) {
+    startMedicineChase(selectedKitten.id);
+    return;
+  }
+  
+  await sendCareActionToServer(actionType);
+}
+
+// Actual network call and visual update for actions
+async function sendCareActionToServer(actionType: CareActionType) {
+  if (!selectedKitten && actionType !== "clean") return;
+  
+  // Instantly command the kitten to walk to the appropriate station!
+  if (selectedKitten) {
+    const state = playpenStates.get(selectedKitten.id);
+    if (state) {
+      state.climbPlatform = 'none'; // reset climbing when performing actions
+       if (actionType === "feed") {
+        state.behavior = "eating";
+        state.targetX = 24; // Walk to Food Bowl (safe 24%)
+        state.targetY = 45;
+        state.isWalking = true;
+        state.behaviorTimer = 60; // Stay for 6 seconds
+      } else if (actionType === "play") {
+        state.behavior = "playing";
+        state.targetX = 62; // Walk to Yarn Ball
+        state.targetY = 40;
+        state.isWalking = true;
+        state.behaviorTimer = 60;
+      } else if (actionType === "treat") {
+        state.behavior = "playing"; // Zoomies!
+        state.isWalking = true;
+        state.targetX = 18 + Math.random() * 64; // Run to random location
+        state.targetY = 15 + Math.random() * 70;
+        state.speed = 1.5; // High speed!
+        state.behaviorTimer = 80;
+        showKittenSpeech(selectedKitten.id, "⚡ TREAT TIME! ZOOMIES! ⚡");
+      } else if (actionType === "pet") {
+        state.behavior = "grooming";
+        state.isWalking = false; // Interact in place
+        state.behaviorTimer = 40;
+      } else if (actionType === "medicine") {
+        state.behavior = "grooming";
+        state.isWalking = false;
+        state.behaviorTimer = 40;
+      }
+
+      // Update direction and flip state
+      if (state.isWalking) {
+        const deltaX = state.targetX - state.x;
+        const deltaY = state.targetY - state.y;
+        if (Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+          state.direction = deltaY > 0 ? 'back' : 'front';
+          state.isFlipped = deltaX < 0;
+        } else {
+          state.direction = 'side';
+          state.isFlipped = deltaX > 0;
+        }
+      } else {
+        if (state.behavior === 'eating' || state.behavior === 'scratching' || state.behavior === 'playing') {
+          state.direction = 'side';
+          if (state.behavior === 'eating') state.isFlipped = state.x < 24;
+          else if (state.behavior === 'scratching') state.isFlipped = state.x < 42;
+          else if (state.behavior === 'playing') state.isFlipped = state.x < 62;
+        } else {
+          state.direction = 'front';
+        }
+      }
+      
+      // Instantly update visual state classes
+      const el = document.querySelector(`.playpen-kitten[data-id="${selectedKitten.id}"]`) as HTMLDivElement;
+      if (el) {
+        el.className = `playpen-kitten ${state.behavior} selected personality-${PERSONALITY_MAP[selectedKitten.personality || 'shironeko'].archetype} ${state.isWalking ? 'walking' : ''}`;
+      }
+    }
   }
   
   let emoji = "❤️";
   if (actionType === "feed") emoji = "🐟";
   if (actionType === "play") emoji = "🧶";
+  if (actionType === "treat") emoji = "🍪";
   if (actionType === "clean") emoji = "🧼";
+  if (actionType === "medicine") emoji = "💖";
   
   triggerParticles(emoji);
 
   try {
     const reqBody: ActionRequest = {
-      kittenId: selectedKitten.id,
+      kittenId: selectedKitten ? selectedKitten.id : "global",
       action: actionType,
     };
     
@@ -574,11 +1002,14 @@ async function performCareAction(actionType: CareActionType) {
     const data: ActionResponse = await res.json();
     kittensList = data.kittens;
     catsList = data.cats;
+    roomLitterbox = data.litterbox || 0;
     
     // Update active kitten reference
-    const matched = kittensList.find(x => x.id === selectedKitten!.id) || catsList.find(x => x.id === selectedKitten!.id);
-    if (matched) {
-      selectedKitten = matched;
+    if (selectedKitten) {
+      const matched = kittensList.find(x => x.id === selectedKitten!.id) || catsList.find(x => x.id === selectedKitten!.id);
+      if (matched) {
+        selectedKitten = matched;
+      }
     }
 
     // Refresh display
@@ -592,16 +1023,6 @@ async function performCareAction(actionType: CareActionType) {
     hudActions.textContent = data.profile.actionsPerformed.toString();
   } catch (err) {
     console.error("Action error:", err);
-  } finally {
-    // Clear animation classes
-    setTimeout(() => {
-      if (selectedKitten) {
-        const wrap = document.querySelector(`.playpen-kitten[data-id="${selectedKitten.id}"] .kitten-svg-wrapper`);
-        if (wrap) {
-          wrap.classList.remove(`anim-${actionType}`);
-        }
-      }
-    }, 800);
   }
 }
 
@@ -658,6 +1079,7 @@ async function performTimeWarp(hours: number) {
     const data: TimeWarpResponse = await res.json();
     kittensList = data.kittens;
     catsList = data.cats;
+    roomLitterbox = data.litterbox || 0;
     
     const matched = kittensList.find(x => selectedKitten && x.id === selectedKitten.id) || catsList.find(x => selectedKitten && x.id === selectedKitten.id);
     selectedKitten = matched || kittensList[0] || catsList[0] || null;
@@ -674,8 +1096,9 @@ async function performTimeWarp(hours: number) {
 // Event Listeners
 btnFeed.addEventListener("click", () => performCareAction("feed"));
 btnPlay.addEventListener("click", () => performCareAction("play"));
-btnClean.addEventListener("click", () => performCareAction("clean"));
 btnPet.addEventListener("click", () => performCareAction("pet"));
+btnTreat.addEventListener("click", () => performCareAction("treat"));
+btnClean.addEventListener("click", () => performCareAction("clean"));
 
 // Rename Modal Toggles
 btnRenameTrigger.addEventListener("click", () => {
@@ -707,6 +1130,7 @@ btnSummonStray.addEventListener("click", async () => {
     const data = await res.json();
     kittensList = data.kittens;
     catsList = data.cats;
+    roomLitterbox = data.litterbox || 0;
     
     // Select the new stray kitten
     if (kittensList.length > 0) {
@@ -745,12 +1169,16 @@ interface PlaypenKittenState {
   id: string;
   x: number;
   targetX: number;
+  y: number;
+  targetY: number;
+  direction: 'front' | 'back' | 'side';
   isWalking: boolean;
   isFlipped: boolean;
   speed: number;
   speechTimeout: any;
-  behavior: 'wandering' | 'napping' | 'grooming' | 'staring' | 'chasing';
+  behavior: 'wandering' | 'napping' | 'grooming' | 'staring' | 'chasing' | 'eating' | 'scratching' | 'playing' | 'bathing';
   behaviorTimer: number; // ticks left for current behavior
+  climbPlatform: 'mid' | 'top' | 'none';
 }
 
 const playpenStates = new Map<string, PlaypenKittenState>();
@@ -760,35 +1188,51 @@ const BEHAVIOR_SPEECHES: Record<string, string[]> = {
     "Zzz... 💤",
     "Zzz... purr... 😻",
     "*sleeping in a warm sunbeam*",
-    "*quiet snores*",
     "Purrr... 💤"
   ],
   grooming: [
     "*licks paws*",
     "*cleans face*",
-    "*stretches paws*",
-    "*smooths fur*",
     "Looking neat! ✨"
   ],
   chasing: [
     "A red dot! Chasing! 🔴",
     "Watch me jump! 🧶",
-    "Got the dust bunny!",
-    "Zoomies! 💨",
-    "*pounces!*"
+    "Zoomies! 💨"
   ],
   staring: [
     "*stares blankly at you*",
     "Do you have food? 🐟",
-    "Are you coding? 💻",
-    "Pet me? 🥺",
-    "What's that noise? 👂"
+    "Pet me? 🥺"
   ],
   wandering: [
     "Exploring the playpen... 🐾",
     "Wandering around...",
-    "Sniffing the carpet...",
     "Looking for toys! 🧸"
+  ],
+  eating: [
+    "Nom nom nom... 🐟",
+    "Delicious! 😋",
+    "Munch munch munch...",
+    "Fish is so good! 🐟"
+  ],
+  scratching: [
+    "*scratch scratch* 💈",
+    "Sharpening my claws!",
+    "This post feels great!",
+    "Must scratch! 🐾"
+  ],
+  playing: [
+    "Batting the yarn! 🧶",
+    "Look at it spin!",
+    "Yay, yarn! 🧶",
+    "Pounce! 🐾"
+  ],
+  bathing: [
+    "Splish splash! 🧼",
+    "So bubbly! 🧼",
+    "Cleaning time!",
+    "Squeaky clean! ✨"
   ]
 };
 
@@ -819,7 +1263,8 @@ function renderPlaypen() {
     const arch = meta ? meta.archetype : 'lazy';
 
     if (!state) {
-      const initialX = 15 + Math.random() * 60;
+      const initialX = 18 + Math.random() * 64;
+      const initialY = 15 + Math.random() * 70;
       let speed = 0.12 + Math.random() * 0.1;
       if (arch === 'lazy') {
         speed = 0.05 + Math.random() * 0.04;
@@ -833,21 +1278,41 @@ function renderPlaypen() {
         id: k.id,
         x: initialX,
         targetX: initialX,
+        y: initialY,
+        targetY: initialY,
+        direction: 'front',
         isWalking: false,
         isFlipped: Math.random() > 0.5,
         speed: speed,
         speechTimeout: null,
         behavior: 'wandering',
         behaviorTimer: 30 + Math.random() * 40,
+        climbPlatform: 'none',
       };
       playpenStates.set(k.id, state);
     }
 
     const kDiv = document.createElement("div");
-    // Class includes behavior and personality for CSS animations
-    kDiv.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch}`;
+    // Class includes behavior, personality, walking, and climbing status
+    let climbingClass = "";
+    if (state.climbPlatform === 'mid' && Math.abs(state.x - 10) < 5) {
+      climbingClass = "climbing-mid";
+    } else if (state.climbPlatform === 'top' && Math.abs(state.x - 10) < 5) {
+      climbingClass = "climbing-top";
+    }
+    kDiv.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch} ${state.isWalking ? 'walking' : ''} ${climbingClass}`;
     kDiv.setAttribute("data-id", k.id);
+    
+    // Set 3D positions
+    const climbOffset = state.climbPlatform === 'mid' ? 30 : (state.climbPlatform === 'top' ? 70 : 0);
+    const bottomVal = 12 + (state.y / 100) * 80 + climbOffset;
+    const scaleVal = (1.1 - (state.y / 100) * 0.45) * (k.stage === "cat" ? 1.2 : 1.0);
+    const zVal = 10 + Math.round(100 - state.y) + (state.climbPlatform !== 'none' ? 20 : 0);
+    
     kDiv.style.left = `${state.x}%`;
+    kDiv.style.bottom = `${bottomVal}px`;
+    kDiv.style.zIndex = `${zVal}`;
+    kDiv.style.transform = `translateX(-50%) scale(${scaleVal})`;
 
     const flipStyle = state.isFlipped ? "transform: scaleX(-1);" : "transform: scaleX(1);";
     
@@ -859,12 +1324,18 @@ function renderPlaypen() {
         <span>Meow!</span>
       </div>
       <div class="kitten-svg-wrapper" style="${flipStyle}">
-        ${getKittenSvg(k.color, renderEyes, k.stage === "cat")}
+        ${getKittenSvg(k.color, renderEyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking)}
       </div>
+      <div class="kitten-shadow"></div>
     `;
 
     // Click handler to select this kitten
-    kDiv.addEventListener("click", () => {
+    kDiv.addEventListener("click", (e) => {
+      if (isMedicineChaseActive && k.id === chasedKittenId) {
+        e.stopPropagation();
+        handleMedicineChaseClick();
+        return;
+      }
       selectedKitten = k;
       renderLitterList();
       renderPlaypen();
@@ -912,137 +1383,274 @@ setInterval(() => {
 
     // 1. Behavior State Machine Ticker
     state.behaviorTimer--;
-    if (state.behaviorTimer <= 0) {
+    if (state.behaviorTimer <= 0 && (!isMedicineChaseActive || k.id !== chasedKittenId)) {
       // Pick new behavior state
       const roll = Math.random();
-      let nextBehavior: 'wandering' | 'napping' | 'grooming' | 'staring' | 'chasing';
+      let nextBehavior: 'wandering' | 'napping' | 'grooming' | 'staring' | 'chasing' | 'eating' | 'scratching' | 'playing' | 'bathing';
+      state.climbPlatform = 'none'; // Default to floor
       
-      if (arch === 'lazy') {
-        // Lazy: 50% nap (long), 25% wander (slow), 15% stare, 5% grooming, 5% chasing
-        if (roll < 0.25) {
-          nextBehavior = 'wandering';
-          state.behaviorTimer = 30 + Math.floor(Math.random() * 40);
-          state.targetX = 15 + Math.random() * 60;
+      // State-driven hunger/happiness overrides
+      if (k.hunger < 50 && Math.random() < 0.75) {
+        nextBehavior = 'eating';
+        state.targetX = 24; // Walk to Food Bowl (safe 24%)
+        state.isWalking = true;
+        state.behaviorTimer = 50 + Math.floor(Math.random() * 30);
+        state.speed = arch === 'lazy' ? 0.07 : (arch === 'hyper' ? 0.25 : 0.14);
+      } else if (k.happiness < 50 && Math.random() < 0.65) {
+        if (Math.random() < 0.5) {
+          nextBehavior = 'playing';
+          state.targetX = 62; // Walk to Yarn Ball
           state.isWalking = true;
-          state.speed = 0.05 + Math.random() * 0.04; // Slow walking
-        } else if (roll < 0.75) {
-          nextBehavior = 'napping';
-          state.behaviorTimer = 120 + Math.floor(Math.random() * 120); // Long naps
-          state.isWalking = false;
-        } else if (roll < 0.90) {
-          nextBehavior = 'staring';
-          state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
-          state.isWalking = false;
-        } else if (roll < 0.95) {
-          nextBehavior = 'grooming';
-          state.behaviorTimer = 30 + Math.floor(Math.random() * 30);
-          state.isWalking = false;
+          state.behaviorTimer = 50 + Math.floor(Math.random() * 30);
+          state.speed = arch === 'lazy' ? 0.07 : (arch === 'hyper' ? 0.25 : 0.14);
         } else {
-          nextBehavior = 'chasing';
-          state.behaviorTimer = 20 + Math.floor(Math.random() * 20);
-          state.targetX = 15 + Math.random() * 60;
+          nextBehavior = 'scratching';
+          state.targetX = 42; // Walk to Scratching Post
           state.isWalking = true;
-          state.speed = 0.18 + Math.random() * 0.05;
-        }
-      } else if (arch === 'hyper') {
-        // Hyper: 45% wander (fast), 10% nap (short), 10% grooming, 10% staring, 25% chasing (very fast)
-        if (roll < 0.45) {
-          nextBehavior = 'wandering';
-          state.behaviorTimer = 30 + Math.floor(Math.random() * 45);
-          state.targetX = 15 + Math.random() * 60;
-          state.isWalking = true;
-          state.speed = 0.24 + Math.random() * 0.12; // Fast wander
-        } else if (roll < 0.55) {
-          nextBehavior = 'napping';
-          state.behaviorTimer = 30 + Math.floor(Math.random() * 40); // Shorter naps
-          state.isWalking = false;
-        } else if (roll < 0.65) {
-          nextBehavior = 'grooming';
-          state.behaviorTimer = 30 + Math.floor(Math.random() * 30);
-          state.isWalking = false;
-        } else if (roll < 0.75) {
-          nextBehavior = 'staring';
-          state.behaviorTimer = 20 + Math.floor(Math.random() * 20);
-          state.isWalking = false;
-        } else {
-          nextBehavior = 'chasing';
-          state.behaviorTimer = 35 + Math.floor(Math.random() * 40);
-          state.targetX = 15 + Math.random() * 60;
-          state.isWalking = true;
-          state.speed = 0.65 + Math.random() * 0.15; // Zooming chase!
-        }
-      } else if (arch === 'shy') {
-        // Shy: Restricts target coordinates near margins (15%-30% or 70%-85%)
-        // 35% wander, 25% nap, 20% grooming, 15% staring, 5% chasing
-        if (roll < 0.35) {
-          nextBehavior = 'wandering';
-          state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
-          state.targetX = Math.random() > 0.5 ? (15 + Math.random() * 15) : (70 + Math.random() * 15);
-          state.isWalking = true;
-          state.speed = 0.10 + Math.random() * 0.05;
-        } else if (roll < 0.60) {
-          nextBehavior = 'napping';
-          state.behaviorTimer = 80 + Math.floor(Math.random() * 80);
-          state.isWalking = false;
-        } else if (roll < 0.80) {
-          nextBehavior = 'grooming';
-          state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
-          state.isWalking = false;
-        } else if (roll < 0.95) {
-          nextBehavior = 'staring';
-          state.behaviorTimer = 30 + Math.floor(Math.random() * 35);
-          state.isWalking = false;
-        } else {
-          nextBehavior = 'chasing';
-          state.behaviorTimer = 20 + Math.floor(Math.random() * 25);
-          state.targetX = Math.random() > 0.5 ? (15 + Math.random() * 15) : (70 + Math.random() * 15);
-          state.isWalking = true;
-          state.speed = 0.25 + Math.random() * 0.05;
+          state.behaviorTimer = 40 + Math.floor(Math.random() * 25);
+          state.speed = arch === 'lazy' ? 0.07 : (arch === 'hyper' ? 0.25 : 0.14);
         }
       } else {
-        // Grumpy: 30% wander, 20% nap, 25% grooming, 20% staring, 5% chasing
-        if (roll < 0.30) {
-          nextBehavior = 'wandering';
-          state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
-          state.targetX = 15 + Math.random() * 60;
-          state.isWalking = true;
-          state.speed = 0.12 + Math.random() * 0.06;
-        } else if (roll < 0.50) {
-          nextBehavior = 'napping';
-          state.behaviorTimer = 60 + Math.floor(Math.random() * 80);
-          state.isWalking = false;
-        } else if (roll < 0.75) {
-          nextBehavior = 'grooming';
-          state.behaviorTimer = 50 + Math.floor(Math.random() * 50);
-          state.isWalking = false;
-        } else if (roll < 0.95) {
-          nextBehavior = 'staring';
-          state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
-          state.isWalking = false;
+        // Archetype-driven random choices
+        if (arch === 'lazy') {
+          // Lazy: 55% nap, 20% wander, 15% stare, 5% grooming, 5% play
+          if (roll < 0.20) {
+            nextBehavior = 'wandering';
+            state.behaviorTimer = 30 + Math.floor(Math.random() * 40);
+            if (Math.random() < 0.15) {
+              state.targetX = 10; // Walk to Cat Tree
+              state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
+            } else {
+              state.targetX = 18 + Math.random() * 64; // Safe bounds
+            }
+            state.isWalking = true;
+            state.speed = 0.05 + Math.random() * 0.04;
+          } else if (roll < 0.75) {
+            nextBehavior = 'napping';
+            state.behaviorTimer = 120 + Math.floor(Math.random() * 120);
+            const sleepRoll = Math.random();
+            if (sleepRoll < 0.5) {
+              state.targetX = 82; // Cozy Bed
+            } else if (sleepRoll < 0.75) {
+              state.targetX = 10;
+              state.climbPlatform = 'mid';
+            } else {
+              state.targetX = 10;
+              state.climbPlatform = 'top';
+            }
+            state.isWalking = true;
+          } else if (roll < 0.90) {
+            nextBehavior = 'staring';
+            state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+            state.isWalking = false;
+          } else if (roll < 0.95) {
+            nextBehavior = 'grooming';
+            state.behaviorTimer = 35 + Math.floor(Math.random() * 30);
+            state.isWalking = false;
+          } else {
+            nextBehavior = 'playing';
+            state.behaviorTimer = 30 + Math.floor(Math.random() * 20);
+            state.targetX = 62;
+            state.isWalking = true;
+          }
+        } else if (arch === 'hyper') {
+          // Hyper: 35% wander, 10% nap, 10% grooming, 10% staring, 15% play, 10% scratch, 10% chase
+          if (roll < 0.35) {
+            nextBehavior = 'wandering';
+            state.behaviorTimer = 30 + Math.floor(Math.random() * 45);
+            if (Math.random() < 0.15) {
+              state.targetX = 10;
+              state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
+            } else {
+              state.targetX = 18 + Math.random() * 64;
+            }
+            state.isWalking = true;
+            state.speed = 0.24 + Math.random() * 0.12;
+          } else if (roll < 0.45) {
+            nextBehavior = 'napping';
+            state.behaviorTimer = 35 + Math.floor(Math.random() * 40);
+            const sleepRoll = Math.random();
+            if (sleepRoll < 0.5) {
+              state.targetX = 82;
+            } else if (sleepRoll < 0.75) {
+              state.targetX = 10;
+              state.climbPlatform = 'mid';
+            } else {
+              state.targetX = 10;
+              state.climbPlatform = 'top';
+            }
+            state.isWalking = true;
+          } else if (roll < 0.55) {
+            nextBehavior = 'grooming';
+            state.behaviorTimer = 30 + Math.floor(Math.random() * 30);
+            state.isWalking = false;
+          } else if (roll < 0.65) {
+            nextBehavior = 'staring';
+            state.behaviorTimer = 20 + Math.floor(Math.random() * 20);
+            state.isWalking = false;
+          } else if (roll < 0.80) {
+            nextBehavior = 'playing';
+            state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+            state.targetX = 62;
+            state.isWalking = true;
+            state.speed = 0.30 + Math.random() * 0.10;
+          } else if (roll < 0.90) {
+            nextBehavior = 'scratching';
+            state.behaviorTimer = 35 + Math.floor(Math.random() * 35);
+            state.targetX = 42;
+            state.isWalking = true;
+            state.speed = 0.25 + Math.random() * 0.10;
+          } else {
+            nextBehavior = 'chasing';
+            state.behaviorTimer = 35 + Math.floor(Math.random() * 40);
+            state.targetX = 18 + Math.random() * 64;
+            state.isWalking = true;
+            state.speed = 0.35 + Math.random() * 0.15;
+          }
+        } else if (arch === 'shy') {
+          // Shy: corner zones mostly
+          if (roll < 0.35) {
+            nextBehavior = 'wandering';
+            state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
+            if (Math.random() < 0.2) {
+              state.targetX = 10;
+              state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
+            } else {
+              state.targetX = Math.random() > 0.5 ? (18 + Math.random() * 10) : (72 + Math.random() * 10);
+            }
+            state.isWalking = true;
+            state.speed = 0.10 + Math.random() * 0.05;
+          } else if (roll < 0.60) {
+            nextBehavior = 'napping';
+            state.behaviorTimer = 80 + Math.floor(Math.random() * 80);
+            const sleepRoll = Math.random();
+            if (sleepRoll < 0.5) {
+              state.targetX = 82;
+            } else if (sleepRoll < 0.75) {
+              state.targetX = 10;
+              state.climbPlatform = 'mid';
+            } else {
+              state.targetX = 10;
+              state.climbPlatform = 'top';
+            }
+            state.isWalking = true;
+          } else if (roll < 0.80) {
+            nextBehavior = 'grooming';
+            state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+            state.isWalking = false;
+          } else if (roll < 0.95) {
+            nextBehavior = 'staring';
+            state.behaviorTimer = 30 + Math.floor(Math.random() * 35);
+            state.isWalking = false;
+          } else {
+            nextBehavior = 'playing';
+            state.behaviorTimer = 25 + Math.floor(Math.random() * 25);
+            state.targetX = 62;
+            state.isWalking = true;
+          }
         } else {
-          nextBehavior = 'chasing';
-          state.behaviorTimer = 20 + Math.floor(Math.random() * 20);
-          state.targetX = 15 + Math.random() * 60;
-          state.isWalking = true;
-          state.speed = 0.30 + Math.random() * 0.08;
+          // Grumpy: wander, nap, groom, stare, scratch
+          if (roll < 0.30) {
+            nextBehavior = 'wandering';
+            state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
+            if (Math.random() < 0.15) {
+              state.targetX = 10;
+              state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
+            } else {
+              state.targetX = 18 + Math.random() * 64;
+            }
+            state.isWalking = true;
+            state.speed = 0.12 + Math.random() * 0.06;
+          } else if (roll < 0.50) {
+            nextBehavior = 'napping';
+            state.behaviorTimer = 60 + Math.floor(Math.random() * 80);
+            const sleepRoll = Math.random();
+            if (sleepRoll < 0.5) {
+              state.targetX = 82;
+            } else if (sleepRoll < 0.75) {
+              state.targetX = 10;
+              state.climbPlatform = 'mid';
+            } else {
+              state.targetX = 10;
+              state.climbPlatform = 'top';
+            }
+            state.isWalking = true;
+          } else if (roll < 0.75) {
+            nextBehavior = 'grooming';
+            state.behaviorTimer = 50 + Math.floor(Math.random() * 50);
+            state.isWalking = false;
+          } else if (roll < 0.90) {
+            nextBehavior = 'staring';
+            state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+            state.isWalking = false;
+          } else {
+            nextBehavior = 'scratching';
+            state.behaviorTimer = 35 + Math.floor(Math.random() * 30);
+            state.targetX = 42;
+            state.isWalking = true;
+          }
         }
       }
 
       state.behavior = nextBehavior;
       
-      // Update DOM classes for CSS animations
-      el.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch}`;
-      
-      // Re-render SVG to show correct eyes
-      const renderEyes = state.behavior === "napping" ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes);
-      if (svgWrap) {
-        svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat");
+      // Assign targetY based on destination targetX
+      if (state.targetX === 24) {
+        state.targetY = 45;
+      } else if (state.targetX === 42) {
+        state.targetY = 70;
+      } else if (state.targetX === 62) {
+        state.targetY = 40;
+      } else if (state.targetX === 82) {
+        state.targetY = 50;
+      } else if (state.targetX === 10) {
+        state.targetY = 85;
+      } else if (state.isWalking) {
+        state.targetY = 15 + Math.floor(Math.random() * 70);
       }
 
-      // 60% chance to say something about new behavior
-      if (Math.random() < 0.6) {
+      // Update direction and flip state based on walking status
+      if (!state.isWalking) {
+        if (state.behavior === 'eating' || state.behavior === 'scratching' || state.behavior === 'playing') {
+          state.direction = 'side';
+          if (state.behavior === 'eating') state.isFlipped = state.x < 24;
+          else if (state.behavior === 'scratching') state.isFlipped = state.x < 42;
+          else if (state.behavior === 'playing') state.isFlipped = state.x < 62;
+        } else {
+          state.direction = 'front';
+        }
+      } else {
+        const deltaX = state.targetX - state.x;
+        const deltaY = state.targetY - state.y;
+        if (Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+          state.direction = deltaY > 0 ? 'back' : 'front';
+          state.isFlipped = deltaX < 0;
+        } else {
+          state.direction = 'side';
+          state.isFlipped = deltaX > 0;
+        }
+      }
+      
+      // Update DOM classes for CSS animations
+      let climbingClass = "";
+      if (state.climbPlatform === 'mid' && Math.abs(state.x - 10) < 5) {
+        climbingClass = "climbing-mid";
+      } else if (state.climbPlatform === 'top' && Math.abs(state.x - 10) < 5) {
+        climbingClass = "climbing-top";
+      }
+      el.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch} ${state.isWalking ? 'walking' : ''} ${climbingClass}`;
+      
+      // Re-render SVG to show correct eyes
+      const renderEyes = (state.behavior === "napping" || state.behavior === "bathing") ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes);
+      if (svgWrap) {
+        svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking);
+        svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
+      }
+
+      // 50% chance to say something about new behavior
+      if (Math.random() < 0.5) {
         let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
-        if (Math.random() < 0.5 && meta && meta.speeches) {
+        if (Math.random() < 0.4 && meta && meta.speeches) {
           pool = meta.speeches;
         }
         const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
@@ -1052,12 +1660,74 @@ setInterval(() => {
 
     // 2. Perform Movement
     if (state.isWalking) {
-      const delta = state.targetX - state.x;
-      if (Math.abs(delta) < 1) {
+      const deltaX = state.targetX - state.x;
+      const deltaY = state.targetY - state.y;
+      
+      if (Math.abs(deltaX) < 1.2 && Math.abs(deltaY) < 1.2) {
         // Arrived at target!
+        
+        // Treat/Zoomies override: if behavior is playing and speed is high, run to another random spot!
+        if (state.behavior === "playing" && state.speed > 1.0 && state.behaviorTimer > 10) {
+          state.targetX = 18 + Math.random() * 64;
+          state.targetY = 15 + Math.random() * 70;
+          state.isWalking = true;
+          // Set direction based on movement
+          const zDeltaX = state.targetX - state.x;
+          const zDeltaY = state.targetY - state.y;
+          if (Math.abs(zDeltaY) > Math.abs(zDeltaX) * 1.2) {
+            state.direction = zDeltaY > 0 ? 'back' : 'front';
+            state.isFlipped = zDeltaX < 0;
+          } else {
+            state.direction = 'side';
+            state.isFlipped = zDeltaX > 0;
+          }
+          if (Math.random() < 0.5) {
+            showKittenSpeech(k.id, ["⚡ ZOOMIES! ⚡", "SO MUCH ENERGY! 🍪", "WHEEE! 🏃‍♂️💨"][Math.floor(Math.random() * 3)]);
+          }
+          return;
+        }
+
         state.isWalking = false;
         state.x = state.targetX;
+        state.y = state.targetY;
+        el.classList.remove("walking");
         
+        // Update direction and flip on arrival
+        if (state.behavior === 'eating' || state.behavior === 'scratching' || state.behavior === 'playing') {
+          state.direction = 'side';
+          if (state.behavior === 'eating') state.isFlipped = state.x < 24;
+          else if (state.behavior === 'scratching') state.isFlipped = state.x < 42;
+          else if (state.behavior === 'playing') state.isFlipped = state.x < 62;
+        } else {
+          state.direction = 'front';
+        }
+
+        let climbingClass = "";
+        if (state.climbPlatform === 'mid' && Math.abs(state.x - 10) < 5) {
+          climbingClass = "climbing-mid";
+        } else if (state.climbPlatform === 'top' && Math.abs(state.x - 10) < 5) {
+          climbingClass = "climbing-top";
+        }
+        el.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch} ${climbingClass}`;
+        
+        // Update inline styles on arrival
+        const climbOffset = state.climbPlatform === 'mid' ? 30 : (state.climbPlatform === 'top' ? 70 : 0);
+        const bottomVal = 12 + (state.y / 100) * 80 + climbOffset;
+        const scaleVal = (1.1 - (state.y / 100) * 0.45) * (k.stage === "cat" ? 1.2 : 1.0);
+        const zVal = 10 + Math.round(100 - state.y) + (state.climbPlatform !== 'none' ? 20 : 0);
+        
+        el.style.left = `${state.x}%`;
+        el.style.bottom = `${bottomVal}px`;
+        el.style.zIndex = `${zVal}`;
+        el.style.transform = `translateX(-50%) scale(${scaleVal})`;
+        
+        // Re-render SVG to show correct eyes on arrival
+        const renderEyes = (state.behavior === "napping" || state.behavior === "bathing") ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes);
+        if (svgWrap) {
+          svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking);
+          svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
+        }
+
         // 20% chance to speak on arrival
         if (Math.random() < 0.2) {
           let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
@@ -1069,26 +1739,149 @@ setInterval(() => {
         }
       } else {
         // Walk!
-        state.x += Math.sign(delta) * state.speed;
-        state.isFlipped = delta < 0; // Flip visual depending on direction
+        state.x += Math.sign(deltaX) * Math.min(Math.abs(deltaX), state.speed);
+        state.y += Math.sign(deltaY) * Math.min(Math.abs(deltaY), state.speed * 0.85);
+        
+        // Calculate dynamic direction while walking
+        if (Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+          state.direction = deltaY > 0 ? 'back' : 'front';
+          state.isFlipped = deltaX < 0;
+        } else {
+          state.direction = 'side';
+          state.isFlipped = deltaX > 0;
+        }
+        
+        let climbingClass = "";
+        if (state.climbPlatform === 'mid' && Math.abs(state.x - 10) < 5) {
+          climbingClass = "climbing-mid";
+        } else if (state.climbPlatform === 'top' && Math.abs(state.x - 10) < 5) {
+          climbingClass = "climbing-top";
+        }
+        el.className = `playpen-kitten ${state.behavior} ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch} walking ${climbingClass}`;
+        
+        // Update inline styles while walking
+        const climbOffset = state.climbPlatform === 'mid' ? 30 : (state.climbPlatform === 'top' ? 70 : 0);
+        const bottomVal = 12 + (state.y / 100) * 80 + climbOffset;
+        const scaleVal = (1.1 - (state.y / 100) * 0.45) * (k.stage === "cat" ? 1.2 : 1.0);
+        const zVal = 10 + Math.round(100 - state.y) + (state.climbPlatform !== 'none' ? 20 : 0);
+        
         el.style.left = `${state.x}%`;
+        el.style.bottom = `${bottomVal}px`;
+        el.style.zIndex = `${zVal}`;
+        el.style.transform = `translateX(-50%) scale(${scaleVal})`;
+        
         if (svgWrap) {
+          svgWrap.innerHTML = getKittenSvg(k.color, (state.behavior === "napping" || state.behavior === "bathing" ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes)), k.stage === "cat", false, state.direction, state.behavior, state.isWalking);
           svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
         }
       }
     } else {
       // Sitting still
-      // 0.4% chance to meow/speak while sitting
-      if (Math.random() < 0.004) {
-        let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
-        if (meta && meta.speeches && Math.random() < 0.6) {
-          pool = meta.speeches;
+      // Medicine Chase Mode: if cursor gets close to the chased sick kitten, make it run away!
+      if (isMedicineChaseActive && k.id === chasedKittenId) {
+        const dist = Math.abs(state.x - mouseXPercent);
+        if (dist < 12) {
+          state.isWalking = true;
+          state.speed = 1.25;
+          // Set target to opposite side
+          state.targetX = mouseXPercent < state.x ? Math.min(82, state.x + 35 + Math.random() * 15) : Math.max(18, state.x - 35 - Math.random() * 15);
+          state.targetY = 15 + Math.random() * 70;
+          state.behaviorTimer = 100;
+          
+          // Update direction
+          const deltaX = state.targetX - state.x;
+          const deltaY = state.targetY - state.y;
+          if (Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+            state.direction = deltaY > 0 ? 'back' : 'front';
+            state.isFlipped = deltaX < 0;
+          } else {
+            state.direction = 'side';
+            state.isFlipped = deltaX > 0;
+          }
+          
+          el.className = `playpen-kitten chasing walking selected personality-${arch}`;
+          
+          if (Math.random() < 0.5) {
+            showKittenSpeech(k.id, ["Catch me if you can! 🏃‍♂️", "No medicine! 🙀", "Aaaah! 🙀"][Math.floor(Math.random() * 3)]);
+          }
         }
-        const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
-        showKittenSpeech(k.id, randomText);
+      } else {
+        // 0.4% chance to meow/speak while sitting
+        if (Math.random() < 0.004) {
+          let pool = BEHAVIOR_SPEECHES[state.behavior] || ["Meow!"];
+          if (meta && meta.speeches && Math.random() < 0.6) {
+            pool = meta.speeches;
+          }
+          const randomText = pool[Math.floor(Math.random() * pool.length)] || "Meow!";
+          showKittenSpeech(k.id, randomText);
+        }
+      }
+      
+      // Ensure positioning remains stable when sitting still
+      const climbOffset = state.climbPlatform === 'mid' ? 30 : (state.climbPlatform === 'top' ? 70 : 0);
+      const bottomVal = 12 + (state.y / 100) * 80 + climbOffset;
+      const scaleVal = (1.1 - (state.y / 100) * 0.45) * (k.stage === "cat" ? 1.2 : 1.0);
+      const zVal = 10 + Math.round(100 - state.y) + (state.climbPlatform !== 'none' ? 20 : 0);
+      
+      el.style.left = `${state.x}%`;
+      el.style.bottom = `${bottomVal}px`;
+      el.style.zIndex = `${zVal}`;
+      el.style.transform = `translateX(-50%) scale(${scaleVal})`;
+      
+      if (svgWrap) {
+        svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
       }
     }
   });
+
+  // 3. Update active states on playroom interactive objects
+  const treeEl = document.getElementById("scene-cat-tree");
+  const bowlEl = document.getElementById("scene-food-bowl");
+  const postEl = document.getElementById("scene-scratching-post");
+  const yarnEl = document.getElementById("scene-yarn-ball");
+  const bedEl = document.getElementById("scene-cat-bed");
+
+  let anyoneClimbing = false;
+  let anyoneEating = false;
+  let anyoneScratching = false;
+  let anyonePlaying = false;
+  let anyoneNapping = false;
+
+  playpenStates.forEach((state) => {
+    if (!state.isWalking) {
+      if (state.climbPlatform !== "none" && Math.abs(state.x - 10) < 5) anyoneClimbing = true;
+      if (state.behavior === "eating" && Math.abs(state.x - 24) < 2.5) anyoneEating = true;
+      if (state.behavior === "scratching" && Math.abs(state.x - 42) < 2.5) anyoneScratching = true;
+      if (state.behavior === "playing" && Math.abs(state.x - 62) < 2.5) anyonePlaying = true;
+      if (state.behavior === "napping" && Math.abs(state.x - 82) < 2.5) anyoneNapping = true;
+    }
+  });
+
+  if (treeEl) {
+    if (anyoneClimbing) treeEl.classList.add("active");
+    else treeEl.classList.remove("active");
+  }
+  if (bowlEl) {
+    if (anyoneEating) {
+      bowlEl.classList.add("active");
+      bowlEl.classList.remove("bowl-empty");
+    } else {
+      bowlEl.classList.remove("active");
+      bowlEl.classList.add("bowl-empty");
+    }
+  }
+  if (postEl) {
+    if (anyoneScratching) postEl.classList.add("active");
+    else postEl.classList.remove("active");
+  }
+  if (yarnEl) {
+    if (anyonePlaying) yarnEl.classList.add("active");
+    else yarnEl.classList.remove("active");
+  }
+  if (bedEl) {
+    if (anyoneNapping) bedEl.classList.add("active");
+    else bedEl.classList.remove("active");
+  }
 }, 100);
 
 // Playpen Laser Pointer Click Listener
@@ -1104,6 +1897,8 @@ playpenViewport.addEventListener("click", (e) => {
   const clickX = e.clientX - rect.left;
   const clickY = e.clientY - rect.top;
   const pctX = (clickX / rect.width) * 100;
+  const clickYFromBottom = rect.height - clickY;
+  const pctY = Math.max(15, Math.min(85, (clickYFromBottom / 120) * 100));
 
   // Create laser dot element
   const laser = document.createElement("div");
@@ -1122,14 +1917,18 @@ playpenViewport.addEventListener("click", (e) => {
     const state = playpenStates.get(k.id);
     if (!state) return;
 
+    // Do not chase laser if in medicine chase mode
+    if (isMedicineChaseActive && k.id === chasedKittenId) return;
+
     const pers = k.personality || 'shironeko';
     const meta = PERSONALITY_MAP[pers];
     const arch = meta ? meta.archetype : 'lazy';
 
     // Laser chase behavior:
     state.behavior = 'chasing';
-    // Laser coordinate is the new targetX
-    state.targetX = Math.max(10, Math.min(90, pctX));
+    state.targetX = Math.max(18, Math.min(82, pctX));
+    state.targetY = pctY;
+    state.climbPlatform = 'none';
     state.isWalking = true;
     
     // Set custom chase speed based on personality archetype
@@ -1149,11 +1948,23 @@ playpenViewport.addEventListener("click", (e) => {
     // Update DOM class to apply running animations
     const el = document.querySelector(`.playpen-kitten[data-id="${k.id}"]`) as HTMLDivElement;
     if (el) {
-      el.className = `playpen-kitten chasing ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch}`;
+      // Calculate dynamic direction while chasing laser
+      const deltaX = state.targetX - state.x;
+      const deltaY = state.targetY - state.y;
+      if (Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+        state.direction = deltaY > 0 ? 'back' : 'front';
+        state.isFlipped = deltaX < 0;
+      } else {
+        state.direction = 'side';
+        state.isFlipped = deltaX > 0;
+      }
+      
+      el.className = `playpen-kitten chasing walking ${selectedKitten && selectedKitten.id === k.id ? "selected" : ""} personality-${arch}`;
       
       const svgWrap = el.querySelector(".kitten-svg-wrapper") as HTMLDivElement;
       if (svgWrap) {
-        svgWrap.innerHTML = getKittenSvg(k.color, k.eyes, k.stage === "cat");
+        svgWrap.innerHTML = getKittenSvg(k.color, k.eyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking);
+        svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
       }
     }
 
@@ -1173,6 +1984,150 @@ playpenViewport.addEventListener("click", (e) => {
     }
   });
 });
+
+// Mini-game: Litterbox Scooping
+function startLitterboxGame() {
+  const modal = document.getElementById("litterbox-modal") as HTMLDivElement;
+  const tray = document.getElementById("litterbox-area") as HTMLDivElement;
+  const counter = document.getElementById("litterbox-count") as HTMLSpanElement;
+  
+  if (!modal || !tray || !counter) return;
+  
+  tray.innerHTML = "";
+  modal.classList.remove("hidden");
+  
+  let poopsRemaining = 5;
+  counter.textContent = poopsRemaining.toString();
+  
+  for (let i = 0; i < 5; i++) {
+    const poop = document.createElement("div");
+    poop.className = "poop-item";
+    poop.textContent = "💩";
+    poop.style.left = `${10 + Math.random() * 75}%`;
+    poop.style.top = `${10 + Math.random() * 65}%`;
+    
+    poop.addEventListener("click", () => {
+      poop.remove();
+      poopsRemaining--;
+      counter.textContent = poopsRemaining.toString();
+      
+      // Clean particle
+      triggerParticles("🧼");
+      
+      if (poopsRemaining === 0) {
+        modal.classList.add("hidden");
+        sendCareActionToServer("clean");
+      }
+    });
+    
+    tray.appendChild(poop);
+  }
+}
+
+// Mini-game: Medicine Chase
+function startMedicineChase(kittenId: string) {
+  if (!selectedKitten) return;
+  isMedicineChaseActive = true;
+  medicineClicks = 0;
+  chasedKittenId = kittenId;
+  
+  // Disable buttons & update styling
+  updateActivePetDisplay();
+  
+  const existingHud = document.getElementById("medicine-chase-hud");
+  if (existingHud) existingHud.remove();
+  
+  const chaseHud = document.createElement("div");
+  chaseHud.className = "medicine-chase-hud";
+  chaseHud.id = "medicine-chase-hud";
+  chaseHud.innerHTML = `💊 CHASE! Click ${selectedKitten.name} <span id="chase-clicks-left">3</span> more times!`;
+  playpenViewport.appendChild(chaseHud);
+  
+  const state = playpenStates.get(kittenId);
+  if (state) {
+    state.behavior = 'chasing';
+    state.isWalking = true;
+    state.targetX = state.x < 50 ? 82 : 18;
+    state.targetY = 15 + Math.random() * 70;
+    state.speed = 1.2;
+    state.behaviorTimer = 100;
+    
+    // Update direction
+    const deltaX = state.targetX - state.x;
+    const deltaY = state.targetY - state.y;
+    if (Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+      state.direction = deltaY > 0 ? 'back' : 'front';
+      state.isFlipped = deltaX < 0;
+    } else {
+      state.direction = 'side';
+      state.isFlipped = deltaX > 0;
+    }
+    
+    showKittenSpeech(kittenId, "Oh no, medicine! 🙀 *runs*");
+    
+    const el = document.querySelector(`.playpen-kitten[data-id="${kittenId}"]`) as HTMLDivElement;
+    if (el) {
+      el.className = `playpen-kitten chasing walking selected personality-${PERSONALITY_MAP[selectedKitten.personality || 'shironeko'].archetype}`;
+    }
+  }
+}
+
+function handleMedicineChaseClick() {
+  if (!isMedicineChaseActive || !selectedKitten) return;
+  
+  medicineClicks++;
+  triggerParticles("💊");
+  
+  const counterSpan = document.getElementById("chase-clicks-left");
+  if (counterSpan) {
+    counterSpan.textContent = (3 - medicineClicks).toString();
+  }
+  
+  const state = playpenStates.get(chasedKittenId);
+  if (state) {
+    if (medicineClicks < 3) {
+      showKittenSpeech(chasedKittenId, ["Yikes! 🙀", "Can't catch me!", "No medicine!"][medicineClicks - 1]);
+      state.targetX = state.x < 50 ? (65 + Math.random() * 15) : (18 + Math.random() * 15);
+      state.targetY = 15 + Math.random() * 70;
+      state.isWalking = true;
+      state.speed = 1.3;
+      state.behaviorTimer = 100;
+      
+      // Update direction
+      const deltaX = state.targetX - state.x;
+      const deltaY = state.targetY - state.y;
+      if (Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+        state.direction = deltaY > 0 ? 'back' : 'front';
+        state.isFlipped = deltaX < 0;
+      } else {
+        state.direction = 'side';
+        state.isFlipped = deltaX > 0;
+      }
+    } else {
+      isMedicineChaseActive = false;
+      const hud = document.getElementById("medicine-chase-hud");
+      if (hud) hud.remove();
+      
+      showKittenSpeech(chasedKittenId, "You got me! Cured! 💖");
+      sendCareActionToServer("medicine");
+    }
+  }
+}
+
+// Track cursor horizontal percent relative to playpen viewport
+playpenViewport.addEventListener("mousemove", (e) => {
+  const rect = playpenViewport.getBoundingClientRect();
+  mouseXPercent = ((e.clientX - rect.left) / rect.width) * 100;
+});
+
+// Cancel Litterbox Game Handler
+const btnLitterboxCancel = document.getElementById("btn-litterbox-cancel") as HTMLButtonElement;
+if (btnLitterboxCancel) {
+  btnLitterboxCancel.addEventListener("click", () => {
+    const modal = document.getElementById("litterbox-modal") as HTMLDivElement;
+    if (modal) modal.classList.add("hidden");
+  });
+}
 
 // Initial Load & Polling Ticker
 fetchInit();

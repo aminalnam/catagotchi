@@ -29,7 +29,48 @@ const KITTEN_TO_CAT_GROWTH_HOURS = 72; // 3 days
 const KITTEN_NAMES = [
   "Snoo", "Mittens", "Luna", "Garfield", "Felix", "Oliver", "Leo", "Milo",
   "Simba", "Bella", "Coco", "Loki", "Chloe", "Nala", "Cleo", "Ziggy",
-  "Jasper", "Cookie", "Peanut", "Whiskers", "Paws", "Buster", "Daisy"
+  "Jasper", "Cookie", "Peanut", "Whiskers", "Paws", "Buster", "Daisy",
+  "Smudge", "Venus", "Choupette", "Socks", "Jiji", "Marie", "Crookshanks",
+  "Mrs Norris", "Thomas O'Malley", "Toulouse", "Berlioz", "Duchess",
+  "Sylvester", "Tom", "Figaro", "Lucifer", "Artemis", "Diana", "Binx",
+  "Salem", "Cheshire", "Hobbes", "Tigger", "Pluto", "Maru", "Lil Bub",
+  "Grumpy", "Colonel Meow", "Stubbs", "Tama", "Towser", "Gladstone",
+  "Palmerston", "Chief Mouser", "Larry", "Freya", "Waffles", "Pancakes",
+  "Toast", "Biscuit", "Muffin", "Donut", "Jellybean", "Skittles", "Snickers",
+  "Twix", "KitKat", "Fudge", "Caramel", "Toffee", "Butterscotch", "Marshmallow",
+  "Truffle", "Bonbon", "Gelato", "Cheese", "Nacho", "Taco", "Burrito",
+  "Anchovy", "Sardine", "Tuna", "Salmon", "Zeus", "Apollo", "Athena",
+  "Atlas", "Pandora", "Oscar", "Toby", "Jack", "Henry", "Archie", "Teddy",
+  "Sam", "George", "Winston", "Franklin", "Roosevelt", "Lincoln", "Napoleon",
+  "Caesar", "Plato", "Socrates", "Aristotle", "Gizmo", "Peaches", "Ginger",
+  "Pepper", "Shadow", "Smokey", "Rusty", "Tiger", "Patch", "Boots", "Oreo",
+  "Bandit", "Spooky", "Casper", "Ghost", "Phantom", "Midnight", "Eclipse",
+  "Storm", "Thunder", "Blizzard", "Frosty", "Snowy", "Winter", "Summer",
+  "Autumn", "Spring", "Sunny", "Sky", "Cloud", "Rain", "Mist", "Foggy",
+  "Dew", "Breeze", "Gale", "Zephyr", "Whisper", "Echo", "Nova", "Cosmo",
+  "Comet", "Aster", "Galaxy", "Nebula", "Star", "Pixel", "Vector", "Raster",
+  "Voxel", "Byte", "Bit", "Chip", "Glitch", "Widget", "Gadget", "Spork",
+  "Spoon", "Fork", "Knife", "Plate", "Cup", "Saucer", "Bowl", "Teapot",
+  "Kettle", "Mug", "Pip", "Squeak", "Bean", "Sprout", "Seed", "Bud",
+  "Leaf", "Twig", "Branch", "Root", "Bark", "Moss", "Fern", "Ivy",
+  "Holly", "Hazel", "Rowan", "Willow", "Birch", "Maple", "Oak", "Pine",
+  "Cedar", "Cypress", "Sequoia", "Redwood", "Bonsai", "Bamboo", "Cactus",
+  "Aloe", "Basil", "Thyme", "Sage", "Mint", "Parsley", "Dill", "Chive",
+  "Coriander", "Cumin", "Turmeric", "Saffron", "Vanilla", "Nutmeg", "Cinnamon",
+  "Clove", "Cardamom", "Anise", "Fennel", "Pippin", "Frodo", "Samwise",
+  "Merry", "Gandalf", "Legolas", "Gimli", "Aragorn", "Boromir", "Sauron",
+  "Gollum", "Bilbo", "Thorin", "Balin", "Dwalin", "Fili", "Kili", "Bofur",
+  "Bifur", "Bombur", "Oin", "Gloin", "Nori", "Dori", "Ori", "Elrond",
+  "Galadriel", "Thranduil", "Arwen", "Eowyn", "Faramir", "Denethor", "Theoden",
+  "Haldir", "Celeborn", "Romeo", "Juliet", "Hamlet", "Othello", "Macbeth",
+  "Ophelia", "Desdemona", "Mercutio", "Tybalt", "Benvolio", "Puck", "Ariel",
+  "Caliban", "Prospero", "Miranda", "Oberon", "Titania", "Lysander", "Hermia",
+  "Demetrius", "Helena", "Sherlock", "Watson", "Holmes", "Moriarty", "Irene",
+  "Adler", "Mycroft", "Lestrade", "Hudson", "Poirot", "Marple", "Dupin",
+  "Lupin", "Wolfe", "Perry", "Mason", "Columbo", "Kojak", "Spenser",
+  "Bug", "Feature", "Syntax", "Compile", "Docker", "Kubernetes", "Devvit",
+  "Reddit", "Python", "Rust", "Typescript", "Vite", "Tailwind", "Git",
+  "Github", "PR", "Commit", "Push", "Pull", "Merge", "Rebase", "Stash", "Diff"
 ];
 
 const KITTEN_COLORS = [
@@ -147,6 +188,15 @@ async function saveLastUpdate(subredditName: string, time: number): Promise<void
   await redis.set(`catagotchi:last_update:${subredditName}`, time.toString());
 }
 
+async function getLitterbox(subredditName: string): Promise<number> {
+  const raw = await redis.get(`catagotchi:litterbox:${subredditName}`);
+  return raw ? parseInt(raw, 10) : 0;
+}
+
+async function saveLitterbox(subredditName: string, level: number): Promise<void> {
+  await redis.set(`catagotchi:litterbox:${subredditName}`, Math.round(level).toString());
+}
+
 async function getLogs(subredditName: string): Promise<GameLog[]> {
   const raw = await redis.get(`catagotchi:logs:${subredditName}`);
   return raw ? JSON.parse(raw) : [];
@@ -239,6 +289,7 @@ function generateKitten(ownerUser: string, originSub: string): Kitten {
     originSubreddit: originSub,
     ownerUser,
     personality,
+    isSick: false,
   };
 }
 
@@ -253,6 +304,14 @@ async function progressTime(subredditName: string, hoursElapsed: number): Promis
   }
 
   const kittens = await getKittens(subredditName);
+  
+  // 1. Litterbox Accumulation
+  let litterbox = await getLitterbox(subredditName);
+  litterbox = Math.min(100, litterbox + 1.5 * hoursElapsed * kittens.length);
+  await saveLitterbox(subredditName, litterbox);
+  
+  const roomDirtyMult = litterbox >= 70 ? 1.5 : 1.0;
+
   const activeKittens: Kitten[] = [];
   let runawaysCount = 0;
 
@@ -270,10 +329,19 @@ async function progressTime(subredditName: string, hoursElapsed: number): Promis
       cleanlinessMult = meta.decayMultipliers.cleanliness;
     }
 
-    // 1. Decay Stats
-    k.hunger = Math.max(0, k.hunger - DECAY_HUNGER_PER_HOUR * hoursElapsed * hungerMult);
-    k.happiness = Math.max(0, k.happiness - DECAY_HAPPINESS_PER_HOUR * hoursElapsed * happinessMult);
-    k.cleanliness = Math.max(0, k.cleanliness - DECAY_CLEANLINESS_PER_HOUR * hoursElapsed * cleanlinessMult);
+    // Randomly fall sick (approx 3% chance per check)
+    if (hoursElapsed > 0.05 && Math.random() < 0.03 * hoursElapsed && !k.isSick) {
+      k.isSick = true;
+      k.eyes = "sad";
+      await addLog(subredditName, `🤒 Oh no! ${k.name} has fallen sick and needs medicine!`);
+    }
+
+    let sickMult = k.isSick ? 1.5 : 1.0;
+
+    // 1. Decay Stats (affected by sickMult and roomDirtyMult)
+    k.hunger = Math.max(0, k.hunger - DECAY_HUNGER_PER_HOUR * hoursElapsed * hungerMult * sickMult * roomDirtyMult);
+    k.happiness = Math.max(0, k.happiness - DECAY_HAPPINESS_PER_HOUR * hoursElapsed * happinessMult * sickMult * roomDirtyMult);
+    k.cleanliness = Math.max(0, k.cleanliness - DECAY_CLEANLINESS_PER_HOUR * hoursElapsed * cleanlinessMult * sickMult * roomDirtyMult);
 
     // 2. Update expression based on stats
     if (k.hunger < 20 || k.happiness < 20) {
@@ -342,7 +410,7 @@ async function handleRunaway(kitten: Kitten, originSub: string): Promise<void> {
 // Check if we can adopt runaways from the pool
 async function tryAdoptRunaway(subredditName: string): Promise<boolean> {
   const currentKittens = await getKittens(subredditName);
-  if (currentKittens.length >= 6) {
+  if (currentKittens.length >= 16) {
     return false; // Subreddit litter has enough kittens
   }
 
@@ -450,6 +518,8 @@ async function onInit(): Promise<InitResponse> {
   const logs = await getLogs(subredditName);
   const leaderboard = await getLeaderboard(subredditName);
 
+  const litterbox = await getLitterbox(subredditName);
+
   return {
     type: "init",
     postId,
@@ -461,6 +531,7 @@ async function onInit(): Promise<InitResponse> {
     logs,
     profile,
     leaderboard,
+    litterbox,
   };
 }
 
@@ -474,8 +545,32 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
   let cats = await getCats(subredditName);
   let profile = await getProfile(username);
 
+  // Decoupled global litterbox clean action
+  if (action === "clean") {
+    await saveLitterbox(subredditName, 0);
+    await addLog(subredditName, `🧼 u/${username} scooped all the poop and cleaned the sanctuary's shared litterbox!`);
+    
+    profile.actionsPerformed += 1;
+    await saveProfile(username, profile);
+    
+    const logs = await getLogs(subredditName);
+    const leaderboard = await updateLeaderboard(username, profile.actionsPerformed, subredditName);
+    
+    return {
+      success: true,
+      message: "🧼 You scooped the poop! The sanctuary litterbox is clean!",
+      kittens,
+      cats,
+      logs,
+      profile,
+      leaderboard,
+      litterbox: 0
+    };
+  }
+
   const kitten = kittens.find((k) => k.id === kittenId);
   if (!kitten) {
+    const litterbox = await getLitterbox(subredditName);
     return {
       success: false,
       message: "Kitten not found in litter.",
@@ -484,6 +579,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
       logs: await getLogs(subredditName),
       profile,
       leaderboard: await getLeaderboard(subredditName),
+      litterbox,
     };
   }
 
@@ -508,19 +604,24 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
         message = `You played with ${kitten.name}! (+20 Happiness, -10 Cleanliness)`;
       }
       break;
-    case "clean":
-      if (kitten.cleanliness >= 100) {
-        message = `${kitten.name} is already squeaky clean!`;
-      } else {
-        kitten.cleanliness = Math.min(100, kitten.cleanliness + 30);
-        kitten.eyes = "normal";
-        message = `You cleaned ${kitten.name}! (+30 Cleanliness)`;
-      }
-      break;
     case "pet":
       kitten.happiness = Math.min(100, kitten.happiness + 15);
       kitten.eyes = "happy";
       message = `You petted ${kitten.name}! (+15 Happiness)`;
+      break;
+    case "treat":
+      kitten.happiness = Math.min(100, kitten.happiness + 30);
+      kitten.hunger = Math.min(100, kitten.hunger + 10);
+      kitten.cleanliness = Math.max(0, kitten.cleanliness - 5);
+      kitten.eyes = "happy";
+      message = `🍪 You gave a treat to ${kitten.name}! (+30 Happiness, +10 Hunger, -5 Cleanliness)`;
+      break;
+    case "medicine":
+      kitten.isSick = false;
+      kitten.eyes = "happy";
+      kitten.happiness = Math.min(100, kitten.happiness + 20);
+      kitten.hunger = Math.min(100, kitten.hunger + 10);
+      message = `💊 You successfully gave medicine to ${kitten.name}! They are cured!`;
       break;
   }
 
@@ -549,6 +650,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
   await saveKittens(subredditName, kittens);
   const logs = await getLogs(subredditName);
   const leaderboard = await updateLeaderboard(username, profile.actionsPerformed, subredditName);
+  const litterbox = await getLitterbox(subredditName);
 
   return {
     success: true,
@@ -558,6 +660,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
     logs,
     profile,
     leaderboard,
+    litterbox,
   };
 }
 
@@ -600,7 +703,7 @@ async function onSpawnStray(): Promise<any> {
 
   const kittens = await getKittens(subredditName);
   
-  if (kittens.length >= 8) {
+  if (kittens.length >= 24) {
     return { success: false, message: "Litter is full! We cannot fit any more stray kittens.", kittens };
   }
 
@@ -612,6 +715,7 @@ async function onSpawnStray(): Promise<any> {
   const cats = await getCats(subredditName);
   const logs = await getLogs(subredditName);
   const profile = await getProfile(username);
+  const litterbox = await getLitterbox(subredditName);
 
   return {
     success: true,
@@ -619,7 +723,8 @@ async function onSpawnStray(): Promise<any> {
     kittens,
     cats,
     logs,
-    profile
+    profile,
+    litterbox
   };
 }
 
@@ -672,6 +777,7 @@ async function onTimeWarp(req: IncomingMessage): Promise<TimeWarpResponse> {
   
   await addLog(subredditName, `⏰ Admin u/${username} warped time forward by ${hours} hours!`);
   const logs = await getLogs(subredditName);
+  const litterbox = await getLitterbox(subredditName);
 
   return {
     success: true,
@@ -679,6 +785,7 @@ async function onTimeWarp(req: IncomingMessage): Promise<TimeWarpResponse> {
     kittens: finalKittens,
     cats,
     logs,
+    litterbox
   };
 }
 
