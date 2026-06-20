@@ -17,6 +17,8 @@ import {
   type CareActionType,
   type KittenPersonality,
   PERSONALITY_MAP,
+  SHOP_ACCESSORIES,
+  SHOP_TOYS,
 } from "../shared/api.ts";
 
 // Configurable constants
@@ -219,12 +221,19 @@ async function addLog(subredditName: string, text: string): Promise<GameLog[]> {
 async function getProfile(username: string): Promise<PlayerProfile> {
   const raw = await redis.get(`catagotchi:profile:${username}`);
   if (raw) {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (parsed.pawCoins === undefined) parsed.pawCoins = 100;
+    if (!parsed.unlockedAccessories) parsed.unlockedAccessories = [];
+    if (!parsed.unlockedToys) parsed.unlockedToys = [];
+    return parsed;
   }
   return {
     username,
     actionsPerformed: 0,
     hasPlayedBefore: false,
+    pawCoins: 100,
+    unlockedAccessories: [],
+    unlockedToys: [],
   };
 }
 
@@ -537,13 +546,127 @@ async function onInit(): Promise<InitResponse> {
 
 // 2. Pet, Feed, Clean, Play Action
 async function onAction(req: IncomingMessage): Promise<ActionResponse> {
-  const { kittenId, action } = await readJSON<ActionRequest>(req);
+  const { kittenId, action, targetId } = await readJSON<ActionRequest>(req);
   const username = getUsername();
   const subredditName = getSubredditName();
 
   let kittens = await getKittens(subredditName);
   let cats = await getCats(subredditName);
   let profile = await getProfile(username);
+  let litterbox = await getLitterbox(subredditName);
+
+  // 1. Handle Shop / Customisation Actions
+  if (action === "buy_accessory") {
+    if (!targetId) {
+      return { success: false, message: "Missing item ID.", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    const item = SHOP_ACCESSORIES.find(a => a.id === targetId);
+    if (!item) {
+      return { success: false, message: "Accessory not found.", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    if (profile.unlockedAccessories.includes(targetId)) {
+      return { success: false, message: "You already own this accessory!", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    if (profile.pawCoins < item.cost) {
+      return { success: false, message: `Insufficient Paw Coins! Needs ${item.cost} Paw Coins.`, kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    profile.pawCoins -= item.cost;
+    profile.unlockedAccessories.push(targetId);
+    await saveProfile(username, profile);
+    await addLog(subredditName, `🛍️ u/${username} bought the ${item.name} accessory!`);
+    
+    return {
+      success: true,
+      message: `Successfully purchased ${item.name}!`,
+      kittens,
+      cats,
+      logs: await getLogs(subredditName),
+      profile,
+      leaderboard: await getLeaderboard(subredditName),
+      litterbox
+    };
+  }
+
+  if (action === "equip_accessory") {
+    if (!targetId) {
+      return { success: false, message: "Missing item ID.", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    if (!profile.unlockedAccessories.includes(targetId)) {
+      return { success: false, message: "You do not own this accessory.", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    const kitten = kittens.find(k => k.id === kittenId);
+    if (!kitten) {
+      return { success: false, message: "Kitten not found.", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    const item = SHOP_ACCESSORIES.find(a => a.id === targetId);
+    const itemName = item ? item.name : targetId;
+    kitten.accessory = targetId;
+    await saveKittens(subredditName, kittens);
+    await addLog(subredditName, `👒 u/${username} dressed ${kitten.name} in a ${itemName}!`);
+
+    return {
+      success: true,
+      message: `Equipped ${itemName} on ${kitten.name}!`,
+      kittens,
+      cats,
+      logs: await getLogs(subredditName),
+      profile,
+      leaderboard: await getLeaderboard(subredditName),
+      litterbox
+    };
+  }
+
+  if (action === "unequip_accessory") {
+    const kitten = kittens.find(k => k.id === kittenId);
+    if (!kitten) {
+      return { success: false, message: "Kitten not found.", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    kitten.accessory = null;
+    await saveKittens(subredditName, kittens);
+    await addLog(subredditName, `👒 u/${username} removed accessories from ${kitten.name}`);
+
+    return {
+      success: true,
+      message: `Removed accessories from ${kitten.name}!`,
+      kittens,
+      cats,
+      logs: await getLogs(subredditName),
+      profile,
+      leaderboard: await getLeaderboard(subredditName),
+      litterbox
+    };
+  }
+
+  if (action === "buy_toy") {
+    if (!targetId) {
+      return { success: false, message: "Missing item ID.", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    const item = SHOP_TOYS.find(t => t.id === targetId);
+    if (!item) {
+      return { success: false, message: "Toy not found.", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    if (profile.unlockedToys.includes(targetId)) {
+      return { success: false, message: "You already unlocked this toy!", kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    if (profile.pawCoins < item.cost) {
+      return { success: false, message: `Insufficient Paw Coins! Needs ${item.cost} Paw Coins.`, kittens, cats, logs: await getLogs(subredditName), profile, leaderboard: await getLeaderboard(subredditName), litterbox };
+    }
+    profile.pawCoins -= item.cost;
+    profile.unlockedToys.push(targetId);
+    await saveProfile(username, profile);
+    await addLog(subredditName, `🧸 u/${username} unlocked the ${item.name} for the playpen!`);
+
+    return {
+      success: true,
+      message: `Successfully unlocked ${item.name}!`,
+      kittens,
+      cats,
+      logs: await getLogs(subredditName),
+      profile,
+      leaderboard: await getLeaderboard(subredditName),
+      litterbox
+    };
+  }
 
   // Decoupled global litterbox clean action
   if (action === "clean") {
@@ -551,6 +674,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
     await addLog(subredditName, `🧼 u/${username} scooped all the poop and cleaned the sanctuary's shared litterbox!`);
     
     profile.actionsPerformed += 1;
+    profile.pawCoins += 15; // Reward 15 coins for cleaning litterbox!
     await saveProfile(username, profile);
     
     const logs = await getLogs(subredditName);
@@ -558,7 +682,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
     
     return {
       success: true,
-      message: "🧼 You scooped the poop! The sanctuary litterbox is clean!",
+      message: "🧼 You scooped the poop! You earned 15 Paw Coins!",
       kittens,
       cats,
       logs,
@@ -570,7 +694,6 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
 
   const kitten = kittens.find((k) => k.id === kittenId);
   if (!kitten) {
-    const litterbox = await getLitterbox(subredditName);
     return {
       success: false,
       message: "Kitten not found in litter.",
@@ -584,6 +707,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
   }
 
   let message = "";
+  let actionSuccess = false;
   switch (action) {
     case "feed":
       if (kitten.hunger >= 100) {
@@ -592,6 +716,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
         kitten.hunger = Math.min(100, kitten.hunger + 25);
         kitten.eyes = "happy";
         message = `You fed ${kitten.name}! (+25 Hunger)`;
+        actionSuccess = true;
       }
       break;
     case "play":
@@ -602,12 +727,14 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
         kitten.cleanliness = Math.max(0, kitten.cleanliness - 10);
         kitten.eyes = "happy";
         message = `You played with ${kitten.name}! (+20 Happiness, -10 Cleanliness)`;
+        actionSuccess = true;
       }
       break;
     case "pet":
       kitten.happiness = Math.min(100, kitten.happiness + 15);
       kitten.eyes = "happy";
       message = `You petted ${kitten.name}! (+15 Happiness)`;
+      actionSuccess = true;
       break;
     case "treat":
       kitten.happiness = Math.min(100, kitten.happiness + 30);
@@ -615,6 +742,7 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
       kitten.cleanliness = Math.max(0, kitten.cleanliness - 5);
       kitten.eyes = "happy";
       message = `🍪 You gave a treat to ${kitten.name}! (+30 Happiness, +10 Hunger, -5 Cleanliness)`;
+      actionSuccess = true;
       break;
     case "medicine":
       kitten.isSick = false;
@@ -622,12 +750,16 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
       kitten.happiness = Math.min(100, kitten.happiness + 20);
       kitten.hunger = Math.min(100, kitten.hunger + 10);
       message = `💊 You successfully gave medicine to ${kitten.name}! They are cured!`;
+      actionSuccess = true;
       break;
   }
 
-  // Update profile
-  profile.actionsPerformed += 1;
-  await saveProfile(username, profile);
+  // Update profile and award coins if care action succeeded
+  if (actionSuccess) {
+    profile.actionsPerformed += 1;
+    profile.pawCoins += 5; // Reward +5 Paw Coins for care action!
+    await saveProfile(username, profile);
+  }
 
   // Check growth into cat
   const kittenAgeHours = (Date.now() - kitten.bornAt) / (1000 * 60 * 60);
@@ -643,14 +775,14 @@ async function onAction(req: IncomingMessage): Promise<ActionResponse> {
     
     await addLog(subredditName, `🏆 AMAZING! ${kitten.name} has grown up into a beautiful cat and moved to the Cat Sanctuary!`);
     message = `🏆 AMAZING! ${kitten.name} has grown up into a mature cat!`;
-  } else {
+  } else if (actionSuccess) {
     await addLog(subredditName, `❤️ u/${username} performed ${action} on ${kitten.name}`);
   }
 
   await saveKittens(subredditName, kittens);
   const logs = await getLogs(subredditName);
   const leaderboard = await updateLeaderboard(username, profile.actionsPerformed, subredditName);
-  const litterbox = await getLitterbox(subredditName);
+  litterbox = await getLitterbox(subredditName);
 
   return {
     success: true,

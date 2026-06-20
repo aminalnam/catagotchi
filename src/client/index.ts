@@ -13,6 +13,8 @@ import {
   type CareActionType,
   type KittenPersonality,
   PERSONALITY_MAP,
+  SHOP_ACCESSORIES,
+  SHOP_TOYS,
 } from "../shared/api.ts";
 
 // Client-side Offline Mock Mode Interceptor
@@ -64,7 +66,10 @@ if (window.location.search.includes("mock=true") || window.location.hostname ===
     profile: {
       username: "Player123",
       actionsPerformed: 5,
-      hasPlayedBefore: true
+      hasPlayedBefore: true,
+      pawCoins: 100,
+      unlockedAccessories: [] as string[],
+      unlockedToys: [] as string[],
     } as PlayerProfile,
     leaderboard: [
       { username: "Player123", score: 5 },
@@ -131,16 +136,46 @@ if (window.location.search.includes("mock=true") || window.location.hostname ===
       const body = JSON.parse(init?.body as string || "{}") as ActionRequest;
       const kId = body.kittenId;
       const action = body.action;
+      const targetId = body.targetId;
       
       mockState.profile.actionsPerformed++;
       mockState.leaderboard[0].score = mockState.profile.actionsPerformed;
       
-      if (kId === "global" && action === "clean") {
+      if (action === "buy_accessory") {
+        const item = SHOP_ACCESSORIES.find(a => a.id === targetId);
+        if (item && mockState.profile.pawCoins >= item.cost) {
+          mockState.profile.pawCoins -= item.cost;
+          mockState.profile.unlockedAccessories.push(targetId!);
+          mockState.logs.unshift({ id: "log_" + Date.now(), text: `u/${mockState.username} bought the ${item.name} accessory!`, timestamp: Date.now() });
+        }
+      } else if (action === "equip_accessory") {
+        const kit = mockState.kittens.find(x => x.id === kId) || mockState.cats.find(x => x.id === kId);
+        if (kit) {
+          kit.accessory = targetId;
+          const item = SHOP_ACCESSORIES.find(a => a.id === targetId);
+          mockState.logs.unshift({ id: "log_" + Date.now(), text: `u/${mockState.username} dressed ${kit.name} in a ${item?.name || targetId}!`, timestamp: Date.now() });
+        }
+      } else if (action === "unequip_accessory") {
+        const kit = mockState.kittens.find(x => x.id === kId) || mockState.cats.find(x => x.id === kId);
+        if (kit) {
+          kit.accessory = null;
+          mockState.logs.unshift({ id: "log_" + Date.now(), text: `u/${mockState.username} removed accessories from ${kit.name}`, timestamp: Date.now() });
+        }
+      } else if (action === "buy_toy") {
+        const item = SHOP_TOYS.find(t => t.id === targetId);
+        if (item && mockState.profile.pawCoins >= item.cost) {
+          mockState.profile.pawCoins -= item.cost;
+          mockState.profile.unlockedToys.push(targetId!);
+          mockState.logs.unshift({ id: "log_" + Date.now(), text: `u/${mockState.username} unlocked the ${item.name} for the playpen!`, timestamp: Date.now() });
+        }
+      } else if (kId === "global" && action === "clean") {
         mockState.litterbox = 0;
+        mockState.profile.pawCoins += 15;
         mockState.logs.unshift({ id: "log_" + Date.now(), text: `u/${mockState.username} cleaned the litterbox! 🧼`, timestamp: Date.now() });
       } else {
         const kit = mockState.kittens.find(x => x.id === kId) || mockState.cats.find(x => x.id === kId);
         if (kit) {
+          mockState.profile.pawCoins += 5;
           if (action === "feed") {
             kit.hunger = Math.min(100, kit.hunger + 30);
             mockState.logs.unshift({ id: "log_" + Date.now(), text: `Fed ${kit.name} some fish! 🐟`, timestamp: Date.now() });
@@ -154,6 +189,9 @@ if (window.location.search.includes("mock=true") || window.location.hostname ===
           } else if (action === "medicine") {
             kit.isSick = false;
             mockState.logs.unshift({ id: "log_" + Date.now(), text: `Gave ${kit.name} medicine! 💊`, timestamp: Date.now() });
+          } else if (action === "pet") {
+            kit.happiness = Math.min(100, kit.happiness + 15);
+            mockState.logs.unshift({ id: "log_" + Date.now(), text: `Petted ${kit.name}! ❤️`, timestamp: Date.now() });
           }
         }
       }
@@ -229,6 +267,10 @@ let selectedKitten: Kitten | null = null;
 let currentUsername = "";
 let isModerator = false;
 let roomLitterbox = 0;
+let playerCoins = 100;
+let unlockedAccessories: string[] = [];
+let unlockedToys: string[] = [];
+let activeShopTab: "accessories" | "toys" = "accessories";
 
 // Mini-games State
 let isMedicineChaseActive = false;
@@ -240,6 +282,11 @@ let mouseXPercent = 50;
 const hudSubreddit = document.getElementById("hud-subreddit") as HTMLSpanElement;
 const hudUsername = document.getElementById("hud-username") as HTMLSpanElement;
 const hudActions = document.getElementById("hud-actions") as HTMLSpanElement;
+const hudCoinsTop = document.getElementById("hud-coins-top") as HTMLSpanElement;
+const hudCoins = document.getElementById("hud-coins") as HTMLSpanElement;
+const shopItemsGrid = document.getElementById("shop-items-grid") as HTMLDivElement;
+const shopTabAccessories = document.getElementById("shop-tab-accessories") as HTMLButtonElement;
+const shopTabToys = document.getElementById("shop-tab-toys") as HTMLButtonElement;
 
 const kittenCardsContainer = document.getElementById("kitten-list") as HTMLDivElement;
 const sanctuaryGallery = document.getElementById("sanctuary-gallery") as HTMLDivElement;
@@ -289,151 +336,348 @@ const btnWarp72 = document.getElementById("btn-warp-72") as HTMLButtonElement;
 // Generate SVG Code for Kitten/Cat
 const PIXEL_ART_FRAMES = {
   stand: [
-    "................",
-    "................",
-    "..k........k....",
-    ".kpk......kpk...",
-    ".kkkkkkkkkkkk...",
-    "kksskssksskkkk..",
-    "kksskksskkkkkk.t",
-    "kkeekkeekkkkkk.t",
-    "kkkkkppkkkkkkktt",
-    ".kkkcccckkkkkkt.",
-    "..kwwwwwwkkkttt.",
-    "..kwwwwwwkkkt...",
-    "..kkkkkkkkkk....",
-    "..kkkkkkkkkk....",
-    "..kk....kk......",
-    "..ss....ss......"
+    "........................",
+    "........................",
+    "....dddd........dddd....",
+    "...dhhhhd......dhhhhd...",
+    "..dhhhhhkd....kdhhhhkd..",
+    "..dhhhhkkddddddkkkkkkd..",
+    "..dhhhhkkkkkkkkkkkkksd..",
+    "..dhhhhkkkkkkkkkkkkksd..",
+    ".dhhhhkkkkkkkkkkkkkkssd.",
+    ".dhhhkkddddkkkkddddkssd.",
+    ".dhhhkkdeddkkkkdeddkssd.",
+    ".dhhhhkkddkkkkkkddkkssd.",
+    "..dhhhhkkkkppppkkkkssd..",
+    "...dhhhhkkddddkkkkssd...",
+    "....ddddkkkkkkkkddss....",
+    "......dkkkkkkkkkksd.....",
+    ".....dhhwwwwwwwwkkd.....",
+    ".....dhhwwwwwwwwkkd..dd.",
+    ".....dhhkkkkkkkkksd.dkkd",
+    ".....dhhkkkkkkkkksddkkd.",
+    "......dkkkkkkkkkksdkkd..",
+    "......dkkdkkkkkkdkkdd...",
+    "......ddddd....ddddd....",
+    "........................"
   ],
   walk1: [
-    "................",
-    "................",
-    "..k........k....",
-    ".kpk......kpk...",
-    ".kkkkkkkkkkkk...",
-    "kksskssksskkkk..",
-    "kksskksskkkkkk.t",
-    "kkeekkeekkkkkk.t",
-    "kkkkkppkkkkkkktt",
-    ".kkkcccckkkkkkt.",
-    "..kwwwwwwkkkttt.",
-    "..kwwwwwwkkkt...",
-    "..kkkkkkkkkk....",
-    "..kkkkkkkkkk....",
-    "..kk............",
-    "..ss....kk......"
+    "........................",
+    "........................",
+    "..........dddd..........",
+    ".........dhhhkd..dddd...",
+    "........dhhhhhkd.dhhkd..",
+    "........dhhhhhkdddhhkd..",
+    "........dhhdeddkkkkkksd.",
+    "........dhhhddkkkkkkksd.",
+    ".........dhhkkppppkkksd.",
+    "..........dhhkddkkkksd..",
+    "...........dddkkkdds....",
+    ".........dddkkkkkkkddd..",
+    "........dhhkkkkkkkkkksd.",
+    ".......dhhkkkkkkkkkkkksd.",
+    "......dhhwwwwwwwwkkkkksd.",
+    "......dhhwwwwwwwwkkkkksd.dd",
+    "......dhhkkkkkkkkkkkkkkddkd",
+    ".......dkkkkkkkkkkkkkkdkkd",
+    ".......dkkkkkkkkkkkkkdkkd.",
+    ".......dkkdkkkkkkdkkddkd..",
+    ".......dkkd....dkkd..dd...",
+    ".......dkkd.....dkkd......",
+    ".......ddd......ddd.......",
+    "........................"
   ],
   walk2: [
-    "................",
-    "................",
-    "..k........k....",
-    ".kpk......kpk...",
-    ".kkkkkkkkkkkk...",
-    "kksskssksskkkk..",
-    "kksskksskkkkkk.t",
-    "kkeekkeekkkkkk.t",
-    "kkkkkppkkkkkkktt",
-    ".kkkcccckkkkkkt.",
-    "..kwwwwwwkkkttt.",
-    "..kwwwwwwkkkt...",
-    "..kkkkkkkkkk....",
-    "..kkkkkkkkkk....",
-    "........kk......",
-    "..kk....ss......"
+    "........................",
+    "........................",
+    "..........dddd..........",
+    ".........dhhhkd..dddd...",
+    "........dhhhhhkd.dhhkd..",
+    "........dhhhhhkdddhhkd..",
+    "........dhhdeddkkkkkksd.",
+    "........dhhhddkkkkkkksd.",
+    ".........dhhkkppppkkksd.",
+    "..........dhhkddkkkksd..",
+    "...........dddkkkdds....",
+    ".........dddkkkkkkkddd..",
+    "........dhhkkkkkkkkkksd.",
+    ".......dhhkkkkkkkkkkkksd.",
+    "......dhhwwwwwwwwkkkkksd.",
+    "......dhhwwwwwwwwkkkkksd.dd",
+    "......dhhkkkkkkkkkkkkkkddkd",
+    ".......dkkkkkkkkkkkkkkdkkd",
+    ".......dkkkkkkkkkkkkkdkkd.",
+    "........dkkdkkkkkkdkkddkd.",
+    "........dkkd....dkkd..dd..",
+    ".........dkkd....dkkd.....",
+    ".........ddd......ddd.....",
+    "........................"
   ],
   sleep: [
-    "................",
-    "................",
-    "................",
-    "................",
-    "................",
-    "..k.....k.......",
-    ".kpk...kpk......",
-    ".kkkkkkkkk....tt",
-    "kkssksskkk...tkk",
-    "kkeekkeekkk.tkkk",
-    "kkkppkkkkkktkkkk",
-    ".kkcccckkkktkkkk",
-    ".kkwwwwkkk..tkk.",
-    ".kkkkkkkkk...tt.",
-    "..kkkkkkk.......",
-    "...sssss........"
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "..........dddddd........",
+    "........ddhhhhhhdd......",
+    "......ddhhhhhkkkkkdd....",
+    ".....dhhhhhkkkkkkkkksd..",
+    "....dhhhhhkkkkkkkkkkksd.",
+    "....dhhdeddkkkdeddkksd..",
+    "....dhhhddkkkkkddkkksd..",
+    "....dhhhhkkkkkkkkkkksd..",
+    ".....dkkkkkkkkkkkkkksd..",
+    "......ddkkkkkkkkkkssd...",
+    "........dddddddddd......",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................"
   ],
   eat: [
-    "................",
-    "................",
-    "................",
-    "................",
-    "................",
-    "..k.....k.......",
-    ".kpk...kpk....t.",
-    ".kkkkkkkkk....t.",
-    "kkssksskkk...tt.",
-    "kkeekkeekk...t..",
-    "kkkppkkkkk..tt..",
-    ".kkcccckkkkk....",
-    ".kkwwwwkkkkk....",
-    ".kkkkkkkkkkk....",
-    "..kk...kk.......",
-    "..ss...ss......."
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "..........dddd..........",
+    ".........dhhhkd..dddd...",
+    "........dhhhhhkd.dhhkd..",
+    "........dhhhhhkdddhhkd..",
+    "........dhhdeddkkkkkksd.",
+    "........dhhhddkkkkkkksd.",
+    ".........dhhkkppppkkksd.",
+    "..........dhhkddkkkksd..",
+    "...........dddkkkdds....",
+    ".........dddkkkkkkkddd..",
+    "........dhhkkkkkkkkkksd.",
+    ".......dhhkkkkkkkkkkkksd.",
+    "......dhhwwwwwwwwkkkkksd.dd",
+    "......dhhwwwwwwwwkkkkksddkd",
+    "......dhhkkkkkkkkkkkkkkdkkd",
+    ".......dkkkkkkkkkkkkkkdkkd.",
+    ".......dkkdkkkkkkdkkdddkd..",
+    ".......dkkd....dkkd..dd....",
+    ".......ddd......ddd........",
+    "........................"
   ],
   scratch: [
-    "..k.....k.......",
-    ".kpk...kpk......",
-    ".kkkkkkkkk......",
-    "kkssksskkk......",
-    "kkeekkeekk......",
-    "kkkppkkkkk......",
-    ".kkcccckk.......",
-    ".kkwwwwkk.......",
-    "..kkkkkk........",
-    ".kkkkkkkk.......",
-    ".kk....kk.......",
-    ".kk....kk.......",
-    ".kkkkkkkk.......",
-    ".kkkkkkkk...tt..",
-    ".kk....kk..tkkt.",
-    ".ss....ss...tt.."
+    "........................",
+    "..........dddd..........",
+    ".........dhhhkd..dddd...",
+    "........dhhhhhkd.dhhkd..",
+    "........dhhhhhkdddhhkd..",
+    "........dhhdeddkkkkkksd.",
+    "........dhhhddkkkkkkksd.",
+    ".........dhhkkppppkkksd.",
+    "..........dhhkddkkkksd..",
+    "...........dddkkkdds....",
+    ".........dddkkkkkkkddd..",
+    "........dhhkkkkkkkkkksd.",
+    ".......dhhkkkkkkkkkkkksd.",
+    "......dhhwwwwwwwwkkkkksd.",
+    "......dhhwwwwwwwwkkkkksd.",
+    "......dhhkkkkkkkkkkkkkkd.",
+    "......dhhkkkkkkkkkkkkkkd.dd",
+    ".......dkkkkkkkkkkkkkkkddkd",
+    ".......dkkkkkkkkkkkkkkkdkkd",
+    ".......dkkdkkkkkkdkkdddkkd.",
+    ".......dkkd....dkkd..ddkd..",
+    ".......dkkd....dkkd...dd...",
+    ".......ddd......ddd........",
+    "........................"
   ],
   play: [
-    "............t...",
-    "...........tt...",
-    "..k.....k...t...",
-    ".kpk...kpk.tt...",
-    ".kkkkkkkkk.t....",
-    "kkssksskkktt....",
-    "kkeekkeekkt.....",
-    "kkkppkkkkkt.....",
-    ".kkcccckkkt.....",
-    "..kwwwwkkkt.....",
-    "..kkkkkkkk......",
-    ".kkkkkkkkkk.....",
-    "kk........kk....",
-    "kk........kk....",
-    "................",
-    "................"
+    "........................",
+    "..........dddd..........",
+    ".........dhhhkd..dddd...",
+    "........dhhhhhkd.dhhkd..",
+    "........dhhhhhkdddhhkd..",
+    "........dhhdeddkkkkkksd.",
+    "........dhhhddkkkkkkksd.",
+    ".........dhhkkppppkkksd.",
+    "..........dhhkddkkkksd..",
+    "...........dddkkkdds....",
+    ".........dddkkkkkkkddd..",
+    "........dhhkkkkkkkkkksd.dd",
+    ".......dhhkkkkkkkkkkkksddkd",
+    "......dhhwwwwwwwwkkkkksdkkd",
+    "......dhhwwwwwwwwkkkkksddkd",
+    "......dhhkkkkkkkkkkkkkkddkd",
+    ".......dkkkkkkkkkkkkkkkdkkd",
+    ".......dkkkkkkkkkkkkkkdkkd.",
+    ".......dkkdkkkkkkdkkdddkd..",
+    ".......dkkd....dkkd..dd....",
+    ".......ddd......ddd........",
+    "........................",
+    "........................",
+    "........................"
   ]
 };
 
 const HEAD_GRID = [
-  "................",
-  "................",
-  "..k........k....",
-  ".kpk......kpk...",
-  ".kkkkkkkkkkkk...",
-  "kksskssksskkkk..",
-  "kksskksskkkkkk..",
-  "kkeekkeekkkkkk..",
-  "kkkkkppkkkkkkk..",
-  "................",
-  "................",
-  "................",
-  "................",
-  "................",
-  "................",
-  "................"
+  "........................",
+  "........................",
+  "....dddd........dddd....",
+  "...dhhhhd......dhhhhd...",
+  "..dhhhhhkd....kdhhhhkd..",
+  "..dhhhhkkddddddkkkkkkd..",
+  "..dhhhhkkkkkkkkkkkkksd..",
+  "..dhhhhkkkkkkkkkkkkksd..",
+  ".dhhhhkkkkkkkkkkkkkkssd.",
+  ".dhhhkkddddkkkkddddkssd.",
+  ".dhhhkkdeddkkkkdeddkssd.",
+  ".dhhhhkkddkkkkkkddkkssd.",
+  "..dhhhhkkkkppppkkkkssd..",
+  "...dhhhhkkddddkkkkssd...",
+  "....ddddkkkkkkkkddss....",
+  "........................",
+  "........................",
+  "........................",
+  "........................",
+  "........................",
+  "........................",
+  "........................",
+  "........................",
+  "........................"
 ];
+
+const ACCESSORIES_ART: Record<string, string[]> = {
+  wizard_hat: [
+    "........................",
+    "............u...........",
+    "...........uuu..........",
+    "..........uyyuu.........",
+    ".........uuuuuyy........",
+    "........uuyyuuuu........",
+    ".......uuuuuuuuuu.......",
+    "......uuuuuuuuyyy.......",
+    ".....ddddddddddddd......",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................"
+  ],
+  crown: [
+    "........................",
+    "........................",
+    ".........g.g.g..........",
+    "........ggggggg.........",
+    "........gbbgbbg.........",
+    ".......ddddddddd........",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................"
+  ],
+  party_hat: [
+    "........................",
+    "............w...........",
+    "...........rwr..........",
+    "..........rbwbr.........",
+    ".........rbrbwr.........",
+    "........rbwbwbr.........",
+    ".......rbrbrbwr.........",
+    "......ddddddddddd.......",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................"
+  ],
+  bowtie: [
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "...........r.r..........",
+    "..........rrrrr.........",
+    "...........rrr..........",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................"
+  ],
+  sunglasses: [
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "......eeeeedeeeeed......",
+    "......eeeeedeeeeed......",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+    "........................"
+  ]
+};
 
 function darkenColor(hex: string, percent: number): string {
   let num = parseInt(hex.replace("#", ""), 16),
@@ -451,11 +695,9 @@ function getKittenSvg(
   headOnly: boolean = false,
   viewDirection: 'front' | 'back' | 'side' = 'front',
   behavior: string = "stand",
-  isWalking: boolean = false
+  isWalking: boolean = false,
+  accessory: string | null = null
 ): string {
-  // Always force front view for cute retro pixel art (Desktop Purrfect style)
-  viewDirection = 'front';
-
   // Determine active frame
   let frameName: keyof typeof PIXEL_ART_FRAMES = 'stand';
   if (isWalking) {
@@ -464,7 +706,6 @@ function getKittenSvg(
   } else {
     switch (behavior) {
       case 'napping':
-      case 'bathing':
         frameName = 'sleep';
         break;
       case 'eating':
@@ -483,52 +724,92 @@ function getKittenSvg(
   }
 
   const grid = headOnly ? HEAD_GRID : PIXEL_ART_FRAMES[frameName];
-  const shadowColor = darkenColor(color, 25);
-  
+  const shadowColor = darkenColor(color, 20);
+  const highlightColor = darkenColor(color, -20);
+  const accessoryArt = accessory ? ACCESSORIES_ART[accessory] : null;
+
   // Build SVG rect elements
   let rects = "";
-  for (let r = 0; r < 16; r++) {
+  for (let r = 0; r < 24; r++) {
     const rowStr = grid[r];
-    for (let c_idx = 0; c_idx < 16; c_idx++) {
-      const char = rowStr[c_idx];
-      if (char === ".") continue; // Transparent
+    for (let c_idx = 0; c_idx < 24; c_idx++) {
+      // Check if accessory pixel should be drawn here (with head offsets for side view)
+      let accessoryChar = ".";
+      if (accessoryArt && !headOnly) {
+        let checkCol = c_idx;
+        let checkRow = r;
+        if (viewDirection === 'side') {
+          checkCol = c_idx + 3; // Shift hat left for side-facing head
+          if (behavior === 'eating') {
+            checkRow = r - 2; // Shift hat up/down for lowered head
+          }
+        }
+        if (accessoryArt[checkRow] && accessoryArt[checkRow][checkCol]) {
+          accessoryChar = accessoryArt[checkRow][checkCol];
+        }
+      }
+
+      const char = rowStr ? rowStr[c_idx] : ".";
+
+      if (char === "." && accessoryChar === ".") continue; // Transparent
 
       let pixelColor = color;
-      if (char === "k") {
-        pixelColor = color;
-      } else if (char === "s") {
-        pixelColor = shadowColor;
-      } else if (char === "p") {
-        pixelColor = "#ffb4b4"; // Pink inner ears/nose
-      } else if (char === "w") {
-        pixelColor = "#ffffff"; // White belly/accents
-      } else if (char === "e") {
-        // Render eyes based on eyesType
-        if (eyesType === "sleeping" || eyesType === "happy") {
-          pixelColor = shadowColor; 
-        } else {
-          pixelColor = "#1a202c"; // Dark eye block
+
+      if (accessoryChar !== ".") {
+        // Draw accessory pixel
+        if (accessoryChar === "u") pixelColor = "#8b5cf6"; // Purple (wizard hat)
+        else if (accessoryChar === "y") pixelColor = "#fef08a"; // Yellow stars
+        else if (accessoryChar === "g") pixelColor = "#fbbf24"; // Gold crown
+        else if (accessoryChar === "r") pixelColor = "#ef4444"; // Red (bowtie, party hat)
+        else if (accessoryChar === "b") pixelColor = "#3b82f6"; // Blue jewels
+        else if (accessoryChar === "e") pixelColor = "#1e293b"; // Sunglasses
+        else if (accessoryChar === "w") pixelColor = "#ffffff"; // White
+        else if (accessoryChar === "d") pixelColor = "#1a202c"; // Dark outline
+      } else {
+        // Draw cat pixel
+        if (char === "k") {
+          pixelColor = color;
+        } else if (char === "s") {
+          pixelColor = shadowColor;
+        } else if (char === "h") {
+          pixelColor = highlightColor;
+        } else if (char === "p") {
+          pixelColor = "#ffb4b4"; // Pink inner ears/nose
+        } else if (char === "w") {
+          pixelColor = "#ffffff"; // White belly/accents
+        } else if (char === "e") {
+          // Render eyes based on eyesType and positions
+          if (eyesType === "sleeping" || eyesType === "happy" || eyesType === "sad") {
+            pixelColor = "#1a202c"; // Closed/curve outline eye line
+          } else {
+            // Normal / Grumpy: add beautiful white pupil highlights
+            if (c_idx === 7 || c_idx === 15) {
+              pixelColor = "#ffffff"; // White pupil highlight
+            } else {
+              pixelColor = "#1a202c"; // Dark charcoal pupil
+            }
+          }
+        } else if (char === "c") {
+          pixelColor = isCat ? "#f43f5e" : color; // Red collar
+        } else if (char === "b") {
+          pixelColor = isCat ? "#fbbf24" : color; // Gold bell
+        } else if (char === "d") {
+          pixelColor = "#1a202c"; // Dark outline
         }
-      } else if (char === "c") {
-        pixelColor = isCat ? "#f43f5e" : color; // Red collar for cat, main color for kitten
-      } else if (char === "b") {
-        pixelColor = isCat ? "#fbbf24" : color; // Gold bell for cat
-      } else if (char === "t") {
-        pixelColor = color; // Tail
       }
 
       rects += `<rect x="${c_idx}" y="${r}" width="1" height="1" fill="${pixelColor}" />`;
     }
   }
 
-  // Set viewBox: zoom in on the head for headOnly icons to fill the circular sidebar circles nicely
-  const viewBox = headOnly ? "0 2 15 7" : "0 0 16 16";
+  // Set viewBox: zoom in on the head for headOnly icons
+  const viewBox = headOnly ? "2 2 20 13" : "0 0 24 24";
   const scale = headOnly ? "scale(1)" : (isCat ? "scale(1.15)" : "scale(0.85)");
   const translate = "translate(0, 0)";
 
   return `
     <svg viewBox="${viewBox}" width="100%" height="100%" class="svg-kitten" shape-rendering="crispEdges">
-      <g style="transform-origin: 8px 8px; transform: ${translate} ${scale};">
+      <g style="transform-origin: 12px 12px; transform: ${translate} ${scale};">
         ${rects}
       </g>
     </svg>
@@ -738,7 +1019,7 @@ function renderLitterList() {
 
     card.innerHTML = `
       <div class="kitten-avatar-mini" style="background: rgba(0,0,0,0.15)">
-        ${getKittenSvg(k.color, "normal", false, true)}
+        ${getKittenSvg(k.color, "normal", false, true, "front", "stand", false, k.accessory)}
       </div>
       <div class="kitten-card-info">
         <div class="kitten-card-name" style="color: ${k.color}">${k.name}</div>
@@ -779,7 +1060,7 @@ function renderSanctuaryGallery() {
     item.className = `cat-gallery-item ${selectedKitten && selectedKitten.id === c.id ? "active" : ""}`;
     item.innerHTML = `
       <div class="cat-avatar-mini">
-        ${getKittenSvg(c.color, "happy", true, true)}
+        ${getKittenSvg(c.color, "happy", true, true, "front", "stand", false, c.accessory)}
       </div>
       <div class="cat-gallery-name" style="color: ${c.color}">${c.name}</div>
     `;
@@ -878,12 +1159,21 @@ async function fetchInit() {
       selectedKitten = null;
     }
 
+    // Coins and Shop
+    playerCoins = data.profile.pawCoins ?? 100;
+    unlockedAccessories = data.profile.unlockedAccessories ?? [];
+    unlockedToys = data.profile.unlockedToys ?? [];
+    if (hudCoinsTop) hudCoinsTop.textContent = playerCoins.toString();
+    if (hudCoins) hudCoins.textContent = playerCoins.toString();
+
     renderLitterList();
     renderSanctuaryGallery();
     renderLogs(data.logs);
     renderLeaderboard(data.leaderboard);
     renderPlaypen();
     updateActivePetDisplay();
+    renderShop();
+    updateToysVisibility();
   } catch (err) {
     console.error("Error during initial state sync:", err);
   }
@@ -1324,12 +1614,12 @@ function renderPlaypen() {
         <span>Meow!</span>
       </div>
       <div class="kitten-svg-wrapper" style="${flipStyle}">
-        ${getKittenSvg(k.color, renderEyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking)}
+        ${getKittenSvg(k.color, renderEyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking, k.accessory)}
       </div>
       <div class="kitten-shadow"></div>
     `;
 
-    // Click handler to select this kitten
+    // Click handler to select this kitten and pet it directly!
     kDiv.addEventListener("click", (e) => {
       if (isMedicineChaseActive && k.id === chasedKittenId) {
         e.stopPropagation();
@@ -1338,8 +1628,12 @@ function renderPlaypen() {
       }
       selectedKitten = k;
       renderLitterList();
-      renderPlaypen();
       updateActivePetDisplay();
+      
+      // Direct petting care action!
+      performCareAction("pet");
+      
+      e.stopPropagation();
     });
 
     // Insert before the particle emitter
@@ -1389,205 +1683,232 @@ setInterval(() => {
       let nextBehavior: 'wandering' | 'napping' | 'grooming' | 'staring' | 'chasing' | 'eating' | 'scratching' | 'playing' | 'bathing';
       state.climbPlatform = 'none'; // Default to floor
       
-      // State-driven hunger/happiness overrides
-      if (k.hunger < 50 && Math.random() < 0.75) {
-        nextBehavior = 'eating';
-        state.targetX = 24; // Walk to Food Bowl (safe 24%)
+      // Unlocked Toys Autonomous Behavior overrides
+      let chosenToyAction = false;
+      if (unlockedToys.includes("cardboard_box") && Math.random() < 0.12) {
+        nextBehavior = 'napping';
+        state.targetX = 33;
         state.isWalking = true;
-        state.behaviorTimer = 50 + Math.floor(Math.random() * 30);
-        state.speed = arch === 'lazy' ? 0.07 : (arch === 'hyper' ? 0.25 : 0.14);
-      } else if (k.happiness < 50 && Math.random() < 0.65) {
-        if (Math.random() < 0.5) {
-          nextBehavior = 'playing';
-          state.targetX = 62; // Walk to Yarn Ball
+        state.behaviorTimer = 50 + Math.floor(Math.random() * 40);
+        state.speed = arch === 'lazy' ? 0.06 : 0.14;
+        chosenToyAction = true;
+      } else if (unlockedToys.includes("catnip_plant") && Math.random() < 0.15) {
+        nextBehavior = 'grooming';
+        state.targetX = 52;
+        state.isWalking = true;
+        state.behaviorTimer = 40 + Math.floor(Math.random() * 30);
+        state.speed = arch === 'lazy' ? 0.07 : 0.16;
+        chosenToyAction = true;
+      } else if (unlockedToys.includes("toy_mouse") && Math.random() < 0.18) {
+        nextBehavior = 'playing';
+        state.targetX = 72;
+        state.isWalking = true;
+        state.behaviorTimer = 45 + Math.floor(Math.random() * 30);
+        state.speed = arch === 'lazy' ? 0.08 : 0.20;
+        chosenToyAction = true;
+      }
+
+      if (!chosenToyAction) {
+        // State-driven hunger/happiness overrides
+        if (k.hunger < 50 && Math.random() < 0.75) {
+          nextBehavior = 'eating';
+          state.targetX = 24; // Walk to Food Bowl (safe 24%)
           state.isWalking = true;
           state.behaviorTimer = 50 + Math.floor(Math.random() * 30);
           state.speed = arch === 'lazy' ? 0.07 : (arch === 'hyper' ? 0.25 : 0.14);
-        } else {
-          nextBehavior = 'scratching';
-          state.targetX = 42; // Walk to Scratching Post
-          state.isWalking = true;
-          state.behaviorTimer = 40 + Math.floor(Math.random() * 25);
-          state.speed = arch === 'lazy' ? 0.07 : (arch === 'hyper' ? 0.25 : 0.14);
-        }
-      } else {
-        // Archetype-driven random choices
-        if (arch === 'lazy') {
-          // Lazy: 55% nap, 20% wander, 15% stare, 5% grooming, 5% play
-          if (roll < 0.20) {
-            nextBehavior = 'wandering';
-            state.behaviorTimer = 30 + Math.floor(Math.random() * 40);
-            if (Math.random() < 0.15) {
-              state.targetX = 10; // Walk to Cat Tree
-              state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
-            } else {
-              state.targetX = 18 + Math.random() * 64; // Safe bounds
-            }
-            state.isWalking = true;
-            state.speed = 0.05 + Math.random() * 0.04;
-          } else if (roll < 0.75) {
-            nextBehavior = 'napping';
-            state.behaviorTimer = 120 + Math.floor(Math.random() * 120);
-            const sleepRoll = Math.random();
-            if (sleepRoll < 0.5) {
-              state.targetX = 82; // Cozy Bed
-            } else if (sleepRoll < 0.75) {
-              state.targetX = 10;
-              state.climbPlatform = 'mid';
-            } else {
-              state.targetX = 10;
-              state.climbPlatform = 'top';
-            }
-            state.isWalking = true;
-          } else if (roll < 0.90) {
-            nextBehavior = 'staring';
-            state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
-            state.isWalking = false;
-          } else if (roll < 0.95) {
-            nextBehavior = 'grooming';
-            state.behaviorTimer = 35 + Math.floor(Math.random() * 30);
-            state.isWalking = false;
-          } else {
+        } else if (k.happiness < 50 && Math.random() < 0.65) {
+          if (Math.random() < 0.5) {
             nextBehavior = 'playing';
-            state.behaviorTimer = 30 + Math.floor(Math.random() * 20);
-            state.targetX = 62;
+            state.targetX = 62; // Walk to Yarn Ball
             state.isWalking = true;
-          }
-        } else if (arch === 'hyper') {
-          // Hyper: 35% wander, 10% nap, 10% grooming, 10% staring, 15% play, 10% scratch, 10% chase
-          if (roll < 0.35) {
-            nextBehavior = 'wandering';
-            state.behaviorTimer = 30 + Math.floor(Math.random() * 45);
-            if (Math.random() < 0.15) {
-              state.targetX = 10;
-              state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
-            } else {
-              state.targetX = 18 + Math.random() * 64;
-            }
-            state.isWalking = true;
-            state.speed = 0.24 + Math.random() * 0.12;
-          } else if (roll < 0.45) {
-            nextBehavior = 'napping';
-            state.behaviorTimer = 35 + Math.floor(Math.random() * 40);
-            const sleepRoll = Math.random();
-            if (sleepRoll < 0.5) {
-              state.targetX = 82;
-            } else if (sleepRoll < 0.75) {
-              state.targetX = 10;
-              state.climbPlatform = 'mid';
-            } else {
-              state.targetX = 10;
-              state.climbPlatform = 'top';
-            }
-            state.isWalking = true;
-          } else if (roll < 0.55) {
-            nextBehavior = 'grooming';
-            state.behaviorTimer = 30 + Math.floor(Math.random() * 30);
-            state.isWalking = false;
-          } else if (roll < 0.65) {
-            nextBehavior = 'staring';
-            state.behaviorTimer = 20 + Math.floor(Math.random() * 20);
-            state.isWalking = false;
-          } else if (roll < 0.80) {
-            nextBehavior = 'playing';
-            state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
-            state.targetX = 62;
-            state.isWalking = true;
-            state.speed = 0.30 + Math.random() * 0.10;
-          } else if (roll < 0.90) {
-            nextBehavior = 'scratching';
-            state.behaviorTimer = 35 + Math.floor(Math.random() * 35);
-            state.targetX = 42;
-            state.isWalking = true;
-            state.speed = 0.25 + Math.random() * 0.10;
-          } else {
-            nextBehavior = 'chasing';
-            state.behaviorTimer = 35 + Math.floor(Math.random() * 40);
-            state.targetX = 18 + Math.random() * 64;
-            state.isWalking = true;
-            state.speed = 0.35 + Math.random() * 0.15;
-          }
-        } else if (arch === 'shy') {
-          // Shy: corner zones mostly
-          if (roll < 0.35) {
-            nextBehavior = 'wandering';
-            state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
-            if (Math.random() < 0.2) {
-              state.targetX = 10;
-              state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
-            } else {
-              state.targetX = Math.random() > 0.5 ? (18 + Math.random() * 10) : (72 + Math.random() * 10);
-            }
-            state.isWalking = true;
-            state.speed = 0.10 + Math.random() * 0.05;
-          } else if (roll < 0.60) {
-            nextBehavior = 'napping';
-            state.behaviorTimer = 80 + Math.floor(Math.random() * 80);
-            const sleepRoll = Math.random();
-            if (sleepRoll < 0.5) {
-              state.targetX = 82;
-            } else if (sleepRoll < 0.75) {
-              state.targetX = 10;
-              state.climbPlatform = 'mid';
-            } else {
-              state.targetX = 10;
-              state.climbPlatform = 'top';
-            }
-            state.isWalking = true;
-          } else if (roll < 0.80) {
-            nextBehavior = 'grooming';
-            state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
-            state.isWalking = false;
-          } else if (roll < 0.95) {
-            nextBehavior = 'staring';
-            state.behaviorTimer = 30 + Math.floor(Math.random() * 35);
-            state.isWalking = false;
-          } else {
-            nextBehavior = 'playing';
-            state.behaviorTimer = 25 + Math.floor(Math.random() * 25);
-            state.targetX = 62;
-            state.isWalking = true;
-          }
-        } else {
-          // Grumpy: wander, nap, groom, stare, scratch
-          if (roll < 0.30) {
-            nextBehavior = 'wandering';
-            state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
-            if (Math.random() < 0.15) {
-              state.targetX = 10;
-              state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
-            } else {
-              state.targetX = 18 + Math.random() * 64;
-            }
-            state.isWalking = true;
-            state.speed = 0.12 + Math.random() * 0.06;
-          } else if (roll < 0.50) {
-            nextBehavior = 'napping';
-            state.behaviorTimer = 60 + Math.floor(Math.random() * 80);
-            const sleepRoll = Math.random();
-            if (sleepRoll < 0.5) {
-              state.targetX = 82;
-            } else if (sleepRoll < 0.75) {
-              state.targetX = 10;
-              state.climbPlatform = 'mid';
-            } else {
-              state.targetX = 10;
-              state.climbPlatform = 'top';
-            }
-            state.isWalking = true;
-          } else if (roll < 0.75) {
-            nextBehavior = 'grooming';
-            state.behaviorTimer = 50 + Math.floor(Math.random() * 50);
-            state.isWalking = false;
-          } else if (roll < 0.90) {
-            nextBehavior = 'staring';
-            state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
-            state.isWalking = false;
+            state.behaviorTimer = 50 + Math.floor(Math.random() * 30);
+            state.speed = arch === 'lazy' ? 0.07 : (arch === 'hyper' ? 0.25 : 0.14);
           } else {
             nextBehavior = 'scratching';
-            state.behaviorTimer = 35 + Math.floor(Math.random() * 30);
-            state.targetX = 42;
+            state.targetX = 42; // Walk to Scratching Post
             state.isWalking = true;
+            state.behaviorTimer = 40 + Math.floor(Math.random() * 25);
+            state.speed = arch === 'lazy' ? 0.07 : (arch === 'hyper' ? 0.25 : 0.14);
+          }
+        } else {
+          // Archetype-driven random choices
+          if (arch === 'lazy') {
+            // Lazy: 55% nap, 20% wander, 15% stare, 5% grooming, 5% play
+            if (roll < 0.20) {
+              nextBehavior = 'wandering';
+              state.behaviorTimer = 30 + Math.floor(Math.random() * 40);
+              if (Math.random() < 0.15) {
+                state.targetX = 10; // Walk to Cat Tree
+                state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
+              } else {
+                state.targetX = 18 + Math.random() * 64; // Safe bounds
+              }
+              state.isWalking = true;
+              state.speed = 0.05 + Math.random() * 0.04;
+            } else if (roll < 0.75) {
+              nextBehavior = 'napping';
+              state.behaviorTimer = 120 + Math.floor(Math.random() * 120);
+              const sleepRoll = Math.random();
+              if (sleepRoll < 0.5) {
+                state.targetX = 82; // Cozy Bed
+              } else if (sleepRoll < 0.75) {
+                state.targetX = 10;
+                state.climbPlatform = 'mid';
+              } else {
+                state.targetX = 10;
+                state.climbPlatform = 'top';
+              }
+              state.isWalking = true;
+            } else if (roll < 0.90) {
+              nextBehavior = 'staring';
+              state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+              state.isWalking = false;
+            } else if (roll < 0.95) {
+              nextBehavior = 'grooming';
+              state.behaviorTimer = 35 + Math.floor(Math.random() * 30);
+              state.isWalking = false;
+            } else {
+              nextBehavior = 'playing';
+              state.behaviorTimer = 30 + Math.floor(Math.random() * 20);
+              state.targetX = 62;
+              state.isWalking = true;
+            }
+          } else if (arch === 'hyper') {
+            // Hyper: 35% wander, 10% nap, 10% grooming, 10% staring, 15% play, 10% scratch, 10% chase
+            if (roll < 0.35) {
+              nextBehavior = 'wandering';
+              state.behaviorTimer = 30 + Math.floor(Math.random() * 45);
+              if (Math.random() < 0.15) {
+                state.targetX = 10;
+                state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
+              } else {
+                state.targetX = 18 + Math.random() * 64;
+              }
+              state.isWalking = true;
+              state.speed = 0.24 + Math.random() * 0.12;
+            } else if (roll < 0.45) {
+              nextBehavior = 'napping';
+              state.behaviorTimer = 35 + Math.floor(Math.random() * 40);
+              const sleepRoll = Math.random();
+              if (sleepRoll < 0.5) {
+                state.targetX = 82;
+              } else if (sleepRoll < 0.75) {
+                state.targetX = 10;
+                state.climbPlatform = 'mid';
+              } else {
+                state.targetX = 10;
+                state.climbPlatform = 'top';
+              }
+              state.isWalking = true;
+            } else if (roll < 0.55) {
+              nextBehavior = 'grooming';
+              state.behaviorTimer = 30 + Math.floor(Math.random() * 30);
+              state.isWalking = false;
+            } else if (roll < 0.65) {
+              nextBehavior = 'staring';
+              state.behaviorTimer = 20 + Math.floor(Math.random() * 20);
+              state.isWalking = false;
+            } else if (roll < 0.80) {
+              nextBehavior = 'playing';
+              state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+              state.targetX = 62;
+              state.isWalking = true;
+              state.speed = 0.30 + Math.random() * 0.10;
+            } else if (roll < 0.90) {
+              nextBehavior = 'scratching';
+              state.behaviorTimer = 35 + Math.floor(Math.random() * 35);
+              state.targetX = 42;
+              state.isWalking = true;
+              state.speed = 0.25 + Math.floor(Math.random() * 10);
+            } else {
+              nextBehavior = 'chasing';
+              state.behaviorTimer = 35 + Math.floor(Math.random() * 40);
+              state.targetX = 18 + Math.random() * 64;
+              state.isWalking = true;
+              state.speed = 0.35 + Math.random() * 0.15;
+            }
+          } else if (arch === 'shy') {
+            // Shy: corner zones mostly
+            if (roll < 0.35) {
+              nextBehavior = 'wandering';
+              state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
+              if (Math.random() < 0.2) {
+                state.targetX = 10;
+                state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
+              } else {
+                state.targetX = Math.random() > 0.5 ? (18 + Math.random() * 10) : (72 + Math.random() * 10);
+              }
+              state.isWalking = true;
+              state.speed = 0.10 + Math.random() * 0.05;
+            } else if (roll < 0.60) {
+              nextBehavior = 'napping';
+              state.behaviorTimer = 80 + Math.floor(Math.random() * 80);
+              const sleepRoll = Math.random();
+              if (sleepRoll < 0.5) {
+                state.targetX = 82;
+              } else if (sleepRoll < 0.75) {
+                state.targetX = 10;
+                state.climbPlatform = 'mid';
+              } else {
+                state.targetX = 10;
+                state.climbPlatform = 'top';
+              }
+              state.isWalking = true;
+            } else if (roll < 0.80) {
+              nextBehavior = 'grooming';
+              state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+              state.isWalking = false;
+            } else if (roll < 0.95) {
+              nextBehavior = 'staring';
+              state.behaviorTimer = 30 + Math.floor(Math.random() * 35);
+              state.isWalking = false;
+            } else {
+              nextBehavior = 'playing';
+              state.behaviorTimer = 25 + Math.floor(Math.random() * 25);
+              state.targetX = 62;
+              state.isWalking = true;
+            }
+          } else {
+            // Grumpy: wander, nap, groom, stare, scratch
+            if (roll < 0.30) {
+              nextBehavior = 'wandering';
+              state.behaviorTimer = 40 + Math.floor(Math.random() * 50);
+              if (Math.random() < 0.15) {
+                state.targetX = 10;
+                state.climbPlatform = Math.random() > 0.5 ? 'top' : 'mid';
+              } else {
+                state.targetX = 18 + Math.random() * 64;
+              }
+              state.isWalking = true;
+              state.speed = 0.12 + Math.random() * 0.06;
+            } else if (roll < 0.50) {
+              nextBehavior = 'napping';
+              state.behaviorTimer = 60 + Math.floor(Math.random() * 80);
+              const sleepRoll = Math.random();
+              if (sleepRoll < 0.5) {
+                state.targetX = 82;
+              } else if (sleepRoll < 0.75) {
+                state.targetX = 10;
+                state.climbPlatform = 'mid';
+              } else {
+                state.targetX = 10;
+                state.climbPlatform = 'top';
+              }
+              state.isWalking = true;
+            } else if (roll < 0.75) {
+              nextBehavior = 'grooming';
+              state.behaviorTimer = 50 + Math.floor(Math.random() * 50);
+              state.isWalking = false;
+            } else if (roll < 0.90) {
+              nextBehavior = 'staring';
+              state.behaviorTimer = 40 + Math.floor(Math.random() * 40);
+              state.isWalking = false;
+            } else {
+              nextBehavior = 'scratching';
+              state.behaviorTimer = 35 + Math.floor(Math.random() * 30);
+              state.targetX = 42;
+              state.isWalking = true;
+            }
           }
         }
       }
@@ -1597,10 +1918,16 @@ setInterval(() => {
       // Assign targetY based on destination targetX
       if (state.targetX === 24) {
         state.targetY = 45;
+      } else if (state.targetX === 33) {
+        state.targetY = 55; // Cardboard Box
       } else if (state.targetX === 42) {
         state.targetY = 70;
+      } else if (state.targetX === 52) {
+        state.targetY = 65; // Catnip Plant
       } else if (state.targetX === 62) {
         state.targetY = 40;
+      } else if (state.targetX === 72) {
+        state.targetY = 45; // Toy Mouse
       } else if (state.targetX === 82) {
         state.targetY = 50;
       } else if (state.targetX === 10) {
@@ -1643,7 +1970,7 @@ setInterval(() => {
       // Re-render SVG to show correct eyes
       const renderEyes = (state.behavior === "napping" || state.behavior === "bathing") ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes);
       if (svgWrap) {
-        svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking);
+        svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking, k.accessory);
         svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
       }
 
@@ -1724,8 +2051,18 @@ setInterval(() => {
         // Re-render SVG to show correct eyes on arrival
         const renderEyes = (state.behavior === "napping" || state.behavior === "bathing") ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes);
         if (svgWrap) {
-          svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking);
+          svgWrap.innerHTML = getKittenSvg(k.color, renderEyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking, k.accessory);
           svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
+        }
+
+        // Custom Toys Arrival Side-effects
+        if (state.targetX === 52) {
+          triggerParticles("⭐");
+          showKittenSpeech(k.id, "🌿 CATNIP HIGH! ⭐");
+        } else if (state.targetX === 33) {
+          showKittenSpeech(k.id, "📦 Cozy box time!");
+        } else if (state.targetX === 72) {
+          showKittenSpeech(k.id, "🐭 Pounce on the mouse!");
         }
 
         // 20% chance to speak on arrival
@@ -1771,7 +2108,7 @@ setInterval(() => {
         el.style.transform = `translateX(-50%) scale(${scaleVal})`;
         
         if (svgWrap) {
-          svgWrap.innerHTML = getKittenSvg(k.color, (state.behavior === "napping" || state.behavior === "bathing" ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes)), k.stage === "cat", false, state.direction, state.behavior, state.isWalking);
+          svgWrap.innerHTML = getKittenSvg(k.color, (state.behavior === "napping" || state.behavior === "bathing" ? "sleeping" : (k.eyes === "normal" && arch === "grumpy" ? "grumpy" : k.eyes)), k.stage === "cat", false, state.direction, state.behavior, state.isWalking, k.accessory);
           svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
         }
       }
@@ -1840,12 +2177,18 @@ setInterval(() => {
   const postEl = document.getElementById("scene-scratching-post");
   const yarnEl = document.getElementById("scene-yarn-ball");
   const bedEl = document.getElementById("scene-cat-bed");
+  const boxEl = document.getElementById("scene-cardboard-box");
+  const plantEl = document.getElementById("scene-catnip-plant");
+  const mouseEl = document.getElementById("scene-toy-mouse");
 
   let anyoneClimbing = false;
   let anyoneEating = false;
   let anyoneScratching = false;
   let anyonePlaying = false;
   let anyoneNapping = false;
+  let anyoneInBox = false;
+  let anyoneAtCatnip = false;
+  let anyoneAtMouse = false;
 
   playpenStates.forEach((state) => {
     if (!state.isWalking) {
@@ -1854,6 +2197,9 @@ setInterval(() => {
       if (state.behavior === "scratching" && Math.abs(state.x - 42) < 2.5) anyoneScratching = true;
       if (state.behavior === "playing" && Math.abs(state.x - 62) < 2.5) anyonePlaying = true;
       if (state.behavior === "napping" && Math.abs(state.x - 82) < 2.5) anyoneNapping = true;
+      if (state.targetX === 33 && Math.abs(state.x - 33) < 2.5) anyoneInBox = true;
+      if (state.targetX === 52 && Math.abs(state.x - 52) < 2.5) anyoneAtCatnip = true;
+      if (state.targetX === 72 && Math.abs(state.x - 72) < 2.5) anyoneAtMouse = true;
     }
   });
 
@@ -1881,6 +2227,18 @@ setInterval(() => {
   if (bedEl) {
     if (anyoneNapping) bedEl.classList.add("active");
     else bedEl.classList.remove("active");
+  }
+  if (boxEl) {
+    if (anyoneInBox) boxEl.classList.add("active");
+    else boxEl.classList.remove("active");
+  }
+  if (plantEl) {
+    if (anyoneAtCatnip) plantEl.classList.add("active");
+    else plantEl.classList.remove("active");
+  }
+  if (mouseEl) {
+    if (anyoneAtMouse) mouseEl.classList.add("active");
+    else mouseEl.classList.remove("active");
   }
 }, 100);
 
@@ -1963,7 +2321,7 @@ playpenViewport.addEventListener("click", (e) => {
       
       const svgWrap = el.querySelector(".kitten-svg-wrapper") as HTMLDivElement;
       if (svgWrap) {
-        svgWrap.innerHTML = getKittenSvg(k.color, k.eyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking);
+        svgWrap.innerHTML = getKittenSvg(k.color, k.eyes, k.stage === "cat", false, state.direction, state.behavior, state.isWalking, k.accessory);
         svgWrap.style.transform = state.isFlipped ? "scaleX(-1)" : "scaleX(1)";
       }
     }
@@ -2126,6 +2484,212 @@ if (btnLitterboxCancel) {
   btnLitterboxCancel.addEventListener("click", () => {
     const modal = document.getElementById("litterbox-modal") as HTMLDivElement;
     if (modal) modal.classList.add("hidden");
+  });
+}
+
+// Sanctuary Caretaker Shop Client Logic
+function renderShop() {
+  if (!shopItemsGrid) return;
+  shopItemsGrid.innerHTML = "";
+
+  if (activeShopTab === "accessories") {
+    SHOP_ACCESSORIES.forEach((item) => {
+      const card = document.createElement("div");
+      const isUnlocked = unlockedAccessories.includes(item.id);
+      const isEquipped = selectedKitten && selectedKitten.accessory === item.id;
+      
+      card.className = `shop-item-card ${isUnlocked ? "unlocked" : ""} ${isEquipped ? "equipped" : ""}`;
+      
+      let buttonHtml = "";
+      if (isEquipped) {
+        buttonHtml = `<button class="shop-btn equip-btn active-equip">Unequip</button>`;
+      } else if (isUnlocked) {
+        buttonHtml = `<button class="shop-btn equip-btn">Equip</button>`;
+      } else {
+        buttonHtml = `<button class="shop-btn buy-btn">Buy 🪙${item.cost}</button>`;
+      }
+      
+      card.innerHTML = `
+        <div class="shop-item-icon">${item.icon}</div>
+        <div class="shop-item-details">
+          <div class="shop-item-name">${item.name}</div>
+          <div class="shop-item-desc">${item.description}</div>
+        </div>
+        <div class="shop-item-action-area">
+          ${buttonHtml}
+        </div>
+      `;
+      
+      const actionBtn = card.querySelector(".shop-btn");
+      if (actionBtn) {
+        actionBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          handleShopItemAction(item.id, "accessories");
+        });
+      }
+      
+      shopItemsGrid.appendChild(card);
+    });
+  } else {
+    SHOP_TOYS.forEach((item) => {
+      const card = document.createElement("div");
+      const isUnlocked = unlockedToys.includes(item.id);
+      
+      card.className = `shop-item-card ${isUnlocked ? "unlocked" : ""}`;
+      
+      let buttonHtml = "";
+      if (isUnlocked) {
+        buttonHtml = `<span class="shop-placed-label">Placed 🧸</span>`;
+      } else {
+        buttonHtml = `<button class="shop-btn buy-btn">Buy 🪙${item.cost}</button>`;
+      }
+      
+      card.innerHTML = `
+        <div class="shop-item-icon">${item.icon}</div>
+        <div class="shop-item-details">
+          <div class="shop-item-name">${item.name}</div>
+          <div class="shop-item-desc">${item.description}</div>
+        </div>
+        <div class="shop-item-action-area">
+          ${buttonHtml}
+        </div>
+      `;
+      
+      if (!isUnlocked) {
+        const actionBtn = card.querySelector(".shop-btn");
+        if (actionBtn) {
+          actionBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            handleShopItemAction(item.id, "toys");
+          });
+        }
+      }
+      
+      shopItemsGrid.appendChild(card);
+    });
+  }
+}
+
+async function handleShopItemAction(itemId: string, type: "accessories" | "toys") {
+  if (type === "accessories") {
+    const isUnlocked = unlockedAccessories.includes(itemId);
+    if (!isUnlocked) {
+      const item = SHOP_ACCESSORIES.find(x => x.id === itemId);
+      if (!item) return;
+      if (playerCoins < item.cost) {
+        alert("Not enough Paw Coins! Take care of kittens to earn more.");
+        return;
+      }
+      await performShopCareAction("buy_accessory", itemId);
+    } else {
+      if (!selectedKitten) {
+        alert("Please select a kitten from the playpen first!");
+        return;
+      }
+      const isEquipped = selectedKitten.accessory === itemId;
+      if (isEquipped) {
+        await performShopCareAction("unequip_accessory", itemId);
+      } else {
+        await performShopCareAction("equip_accessory", itemId);
+      }
+    }
+  } else {
+    const item = SHOP_TOYS.find(x => x.id === itemId);
+    if (!item) return;
+    if (playerCoins < item.cost) {
+      alert("Not enough Paw Coins! Take care of kittens to earn more.");
+      return;
+    }
+    await performShopCareAction("buy_toy", itemId);
+  }
+}
+
+async function performShopCareAction(actionType: CareActionType, targetId: string) {
+  let emoji = "🪙";
+  if (actionType === "equip_accessory") emoji = "🎩";
+  if (actionType === "unequip_accessory") emoji = "👒";
+  if (actionType === "buy_toy") emoji = "🧸";
+  
+  triggerParticles(emoji);
+
+  try {
+    const reqBody: ActionRequest = {
+      kittenId: selectedKitten ? selectedKitten.id : "global",
+      action: actionType,
+      targetId: targetId
+    };
+    
+    const res = await fetch(ApiEndpoint.Action, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reqBody),
+    });
+
+    if (!res.ok) throw new Error("Shop Action failed");
+    
+    const data: ActionResponse = await res.json();
+    kittensList = data.kittens;
+    catsList = data.cats;
+    roomLitterbox = data.litterbox || 0;
+    
+    if (selectedKitten) {
+      const matched = kittensList.find(x => x.id === selectedKitten!.id) || catsList.find(x => x.id === selectedKitten!.id);
+      if (matched) {
+        selectedKitten = matched;
+      }
+    }
+
+    renderLitterList();
+    renderSanctuaryGallery();
+    renderLogs(data.logs);
+    renderLeaderboard(data.leaderboard);
+    renderPlaypen();
+    updateActivePetDisplay();
+    
+    playerCoins = data.profile.pawCoins ?? 100;
+    unlockedAccessories = data.profile.unlockedAccessories ?? [];
+    unlockedToys = data.profile.unlockedToys ?? [];
+    if (hudCoinsTop) hudCoinsTop.textContent = playerCoins.toString();
+    if (hudCoins) hudCoins.textContent = playerCoins.toString();
+    hudActions.textContent = data.profile.actionsPerformed.toString();
+
+    renderShop();
+    updateToysVisibility();
+  } catch (err) {
+    console.error("Shop Action error:", err);
+  }
+}
+
+function updateToysVisibility() {
+  const boxEl = document.getElementById("scene-cardboard-box");
+  const plantEl = document.getElementById("scene-catnip-plant");
+  const mouseEl = document.getElementById("scene-toy-mouse");
+  
+  if (boxEl) {
+    boxEl.classList.toggle("hidden", !unlockedToys.includes("cardboard_box"));
+  }
+  if (plantEl) {
+    plantEl.classList.toggle("hidden", !unlockedToys.includes("catnip_plant"));
+  }
+  if (mouseEl) {
+    mouseEl.classList.toggle("hidden", !unlockedToys.includes("toy_mouse"));
+  }
+}
+
+// Shop Tab Listeners
+if (shopTabAccessories && shopTabToys) {
+  shopTabAccessories.addEventListener("click", () => {
+    activeShopTab = "accessories";
+    shopTabAccessories.classList.add("active");
+    shopTabToys.classList.remove("active");
+    renderShop();
+  });
+
+  shopTabToys.addEventListener("click", () => {
+    activeShopTab = "toys";
+    shopTabToys.classList.add("active");
+    shopTabAccessories.classList.remove("active");
+    renderShop();
   });
 }
 

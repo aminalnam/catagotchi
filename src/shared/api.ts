@@ -25,6 +25,7 @@ export interface Kitten {
   ownerUser: string;  // User who played for the first time and generated this kitten
   personality: KittenPersonality;
   isSick?: boolean;
+  accessory?: string | null; // Currently equipped shop accessory ID
 }
 
 export type KittenPersonality =
@@ -321,6 +322,9 @@ export interface PlayerProfile {
   username: string;
   actionsPerformed: number;
   hasPlayedBefore: boolean;
+  pawCoins: number;
+  unlockedAccessories: string[];
+  unlockedToys: string[];
 }
 
 export interface LeaderboardItem {
@@ -342,12 +346,45 @@ export interface InitResponse {
   litterbox?: number;
 }
 
-export type CareActionType = "feed" | "play" | "clean" | "pet" | "medicine" | "treat";
+export type CareActionType =
+  | "feed"
+  | "play"
+  | "clean"
+  | "pet"
+  | "medicine"
+  | "treat"
+  | "buy_accessory"
+  | "equip_accessory"
+  | "unequip_accessory"
+  | "buy_toy";
 
 export interface ActionRequest {
   kittenId: string;
   action: CareActionType;
+  targetId?: string; // Accessory or toy ID
 }
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  cost: number;
+  description: string;
+  icon: string;
+}
+
+export const SHOP_ACCESSORIES: ShopItem[] = [
+  { id: "wizard_hat", name: "Wizard Hat", cost: 50, description: "A magical cone hat with stars.", icon: "🧙‍♂️" },
+  { id: "crown", name: "Royal Crown", cost: 120, description: "A shiny golden crown fit for royalty.", icon: "👑" },
+  { id: "party_hat", name: "Party Hat", cost: 30, description: "A colorful striped celebration cone.", icon: "🥳" },
+  { id: "bowtie", name: "Red Bowtie", cost: 25, description: "A dapper red bowtie for a classy kitten.", icon: "🎀" },
+  { id: "sunglasses", name: "Cool Shades", cost: 40, description: "Stylish dark sunglasses.", icon: "🕶️" }
+];
+
+export const SHOP_TOYS: ShopItem[] = [
+  { id: "cardboard_box", name: "Cardboard Box", cost: 30, description: "A simple box. Kittens love hiding in it!", icon: "📦" },
+  { id: "catnip_plant", name: "Catnip Plant", cost: 45, description: "Highly exciting herb. Triggers star particles!", icon: "🌿" },
+  { id: "toy_mouse", name: "Toy Mouse", cost: 20, description: "A clockwork mouse to pounce on.", icon: "🐭" }
+];
 
 export interface ActionResponse {
   success: boolean;

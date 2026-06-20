@@ -1773,6 +1773,250 @@ button {
   color: var(--text-muted);
 }
 
+/* Sanctuary Caretaker Shop */
+.shop-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.shop-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px 0 12px;
+}
+
+.shop-header-row h2 {
+  padding: 0;
+  border-bottom: none;
+  font-size: 0.95rem;
+}
+
+.coins-balance {
+  font-family: var(--font-header);
+  font-size: 0.85rem;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 800;
+}
+
+.shop-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-glass);
+  margin-top: 6px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.shop-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 6px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.shop-tab:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.shop-tab.active {
+  color: var(--text-active);
+  border-bottom-color: var(--text-active);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+.shop-items-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shop-item-card {
+  display: flex;
+  align-items: center;
+  background: var(--bg-glass-bright);
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  padding: 6px 8px;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.shop-item-card:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.shop-item-card.equipped {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.shop-item-icon {
+  font-size: 1.3rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.shop-item-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-item-name {
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--text-main);
+}
+
+.shop-item-desc {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.shop-item-action-area {
+  flex-shrink: 0;
+}
+
+.shop-btn {
+  background: var(--text-active);
+  color: #000;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shop-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.shop-btn.buy-btn {
+  background: #fbbf24;
+}
+
+.shop-btn.equip-btn {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.shop-btn.active-equip {
+  background: #ef4444;
+  color: #fff;
+}
+
+.shop-placed-label {
+  font-size: 0.65rem;
+  color: #10b981;
+  font-weight: 600;
+}
+
+/* Custom Interactive Toys */
+#scene-cardboard-box, #scene-catnip-plant, #scene-toy-mouse {
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#scene-cardboard-box {
+  position: absolute;
+  left: 33%;
+  bottom: 30px;
+  z-index: 12;
+  font-size: 2.2rem;
+  cursor: pointer;
+}
+
+#scene-catnip-plant {
+  position: absolute;
+  left: 52%;
+  bottom: 40px;
+  z-index: 13;
+  font-size: 2.2rem;
+  cursor: pointer;
+}
+
+#scene-toy-mouse {
+  position: absolute;
+  left: 72%;
+  bottom: 25px;
+  z-index: 11;
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+
+#scene-cardboard-box.active {
+  animation: item-wobble 0.4s infinite alternate;
+}
+
+#scene-catnip-plant.active {
+  animation: item-wobble 0.6s infinite alternate;
+}
+
+#scene-toy-mouse.active {
+  animation: item-wobble 0.2s infinite alternate;
+}
+
+/* Custom Petting Hand Cursor */
+.playpen-kitten {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" style="font-size:24px"><text y="24">🫳</text></svg>') 12 12, pointer !important;
+}
+
+/* Layout adjustments to fit the shop cleanly */
+.sanctuary-sidebar {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.cats-hall-container {
+  max-height: 120px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.leaderboard-container {
+  max-height: 130px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.activity-log-container {
+  max-height: 120px;
+  flex-shrink: 0;
+  border-bottom: none;
+}
+
 
 
 

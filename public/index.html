@@ -26,6 +26,10 @@
           <span class="hud-label">Caretaker:</span>
           <span id="hud-username" class="hud-value">-</span>
         </div>
+        <div class="hud-item font-coins">
+          <span class="hud-label">🪙 Coins:</span>
+          <span id="hud-coins-top" class="hud-value">100</span>
+        </div>
         <div class="hud-item">
           <span class="hud-label">Actions:</span>
           <span id="hud-actions" class="hud-value">0</span>
@@ -118,9 +122,17 @@
               <div class="tree-trunk">💈</div>
               <div class="tree-label">Cat Tree</div>
             </div>
+            <div id="scene-cardboard-box" class="scene-item hidden" title="Cardboard Box">
+              <div class="box-emoji">📦</div>
+              <div class="box-label">Box</div>
+            </div>
             <div id="scene-food-bowl" class="scene-item bowl-empty" title="Food Bowl">
               <div class="bowl-food">🐟</div>
               <div class="bowl-label">Food Bowl</div>
+            </div>
+            <div id="scene-catnip-plant" class="scene-item hidden" title="Catnip Plant">
+              <div class="catnip-emoji">🌿</div>
+              <div class="catnip-label">Catnip</div>
             </div>
             <div id="scene-scratching-post" class="scene-item" title="Scratching Post">
               <div class="post-rope">💈</div>
@@ -129,6 +141,10 @@
             <div id="scene-yarn-ball" class="scene-item" title="Yarn Ball">
               <div class="yarn-thread">🧶</div>
               <div class="yarn-label">Yarn Toy</div>
+            </div>
+            <div id="scene-toy-mouse" class="scene-item hidden" title="Toy Mouse">
+              <div class="mouse-emoji">🐭</div>
+              <div class="mouse-label">Mouse</div>
             </div>
             <div id="scene-cat-bed" class="scene-item" title="Cozy Bed">
               <div class="bed-pillow">🛏️</div>
@@ -154,8 +170,6 @@
           <div id="status-balloon" class="balloon hidden">
             <span class="balloon-text">Feed me! 😿</span>
           </div>
-
-
 
         </div>
 
@@ -185,7 +199,7 @@
 
       </section>
 
-      <!-- Right Column: Sanctuary Hall of Fame & Subreddit Log -->
+      <!-- Right Column: Sanctuary Hall of Fame & Subreddit Log & Shop -->
       <section class="sanctuary-sidebar">
         
         <!-- Sanctuary Hall of Fame -->
@@ -197,6 +211,23 @@
           </div>
         </div>
 
+        <!-- Sanctuary Caretaker Shop -->
+        <div class="shop-container">
+          <div class="shop-header-row">
+            <h2>Sanctuary Shop</h2>
+            <div class="coins-balance">
+              🪙 <span id="hud-coins">100</span>
+            </div>
+          </div>
+          <div class="shop-tabs">
+            <button id="shop-tab-accessories" class="shop-tab active">Hats</button>
+            <button id="shop-tab-toys" class="shop-tab">Toys</button>
+          </div>
+          <div id="shop-items-grid" class="shop-items-grid">
+            <!-- Shop items will be rendered dynamically -->
+          </div>
+        </div>
+
         <!-- Caretaker Leaderboard -->
         <div class="leaderboard-container">
           <h2>Top Caretakers</h2>
@@ -205,7 +236,6 @@
           </div>
         </div>
 
-        <!-- Subreddit Care Log -->
         <div class="activity-log-container">
           <h2>Sanctuary Feed</h2>
           <div id="activity-log" class="logs-feed">
